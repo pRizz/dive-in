@@ -17,9 +17,9 @@ tech-stack:
   patterns: [Go version via go.mod, UI lint/test/build in ui]
 
 key-files:
-  created:
+  created: []
+  modified:
     - .github/workflows/ci.yml
-  modified: []
 
 key-decisions:
   - "Use GitHub Actions on ubuntu-latest to run UI/Go checks and extension validation."
@@ -54,8 +54,8 @@ completed: 2026-01-28
 
 Task commits for this plan:
 
-1. **Task 1: Add CI workflow for UI + Go checks** - `ea120b0` (chore)
-2. **Task 2: Build and validate the extension image in CI** - `592ab93`, `7c8b22a` (chore)
+1. **Task 1: Add CI workflow for UI + Go checks** - `1b029cb` (chore)
+2. **Task 2: Build and validate the extension image in CI** - `b1fb19f` (chore)
 
 **Plan metadata:** (this commit)
 
