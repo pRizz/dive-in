@@ -60,4 +60,9 @@ jobs:
         run: docker build -t dive-in:ci .
 
       - name: Validate extension metadata and labels
-        run: node scripts/validate-extension.mjs dive-in:ci metadata.json
+        run: |
+          if docker extension version >/dev/null 2>&1; then
+            docker extension validate dive-in:ci
+          else
+            node scripts/validate-extension.mjs dive-in:ci metadata.json
+          fi
