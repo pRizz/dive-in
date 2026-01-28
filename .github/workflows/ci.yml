@@ -60,7 +60,7 @@ jobs:
         run: go vet ./...
 
       - name: Build extension image
-        run: docker build -t dive-in:ci .
+        run: docker build -t dive-in:0.1.0-ci .
 
   validate-extension:
     runs-on: ubuntu-latest
@@ -85,7 +85,7 @@ jobs:
         run: docker extension validate ./metadata.json
 
       - name: Build extension image
-        run: docker build -t dive-in:ci .
+        run: docker build -t dive-in:0.1.0-ci .
 
       - name: Validate extension image
-        run: docker extension validate dive-in:ci
+        run: docker extension validate dive-in:0.1.0-ci

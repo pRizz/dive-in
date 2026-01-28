@@ -26,7 +26,7 @@ FROM alpine
 LABEL org.opencontainers.image.title="Dive In" \
     org.opencontainers.image.description="Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image." \
     org.opencontainers.image.vendor="Prakhar Srivastav" \
-    com.docker.desktop.extension.api.version="0.3.0" \
+    com.docker.desktop.extension.api.version=">=0.4.2" \
     com.docker.extension.screenshots='[{"alt":"main page", "url":"https://github.com/prakhar1989/dive-in/blob/main/screenshots/1.png?raw=true"}, {"alt":"start containers", "url":"https://github.com/prakhar1989/dive-in/blob/main/screenshots/2.png?raw=true"}]' \
     com.docker.extension.detailed-description="<p><h1>Dive In</h1>Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image.</p>" \
     com.docker.desktop.extension.icon="https://raw.githubusercontent.com/prakhar1989/dive-in/main/scuba.svg" \
