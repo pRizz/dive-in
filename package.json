@@ -1,0 +1,17 @@
+{
+  "name": "dive-in-root",
+  "private": true,
+  "workspaces": [
+    "ui"
+  ],
+  "scripts": {
+    "changeset": "changeset",
+    "version": "changeset version && node scripts/sync-version.mjs",
+    "release": "semantic-release"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.28.1",
+    "@semantic-release/github": "^10.4.1",
+    "semantic-release": "^23.0.6"
+  }
+}
