@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createDockerDesktopClient } from "@docker/extension-api-client";
 import {
   Typography,
@@ -26,13 +26,8 @@ interface DockerImage {
 
 const DIVE_DOCKER_IMAGE = "prakhar1989/dive";
 
-// Note: This line relies on Docker Desktop's presence as a host application.
-// If you're running this React app in a browser, it won't work properly.
-const client = createDockerDesktopClient();
-
-function useDockerDesktopClient() {
-  return client;
-}
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
 
 export function App() {
   const [analysis, setAnalysisResult] = useState<AnalysisResult | undefined>(
@@ -41,9 +36,23 @@ export function App() {
   const [isLoading, setLoading] = useState<boolean>(false);
   const [images, setImages] = useState<Image[]>([]);
   const [isHiveInstalled, setDiveInstalled] = useState<boolean>(false);
-  const ddClient = useDockerDesktopClient();
+  const [clientError, setClientError] = useState<string | undefined>(
+    undefined
+  );
+
+  const ddClient = useMemo(() => {
+    try {
+      return createDockerDesktopClient();
+    } catch (error) {
+      setClientError(getErrorMessage(error));
+      return undefined;
+    }
+  }, []);
 
   const checkDiveInstallation = async () => {
+    if (!ddClient) {
+      return;
+    }
     const result = (await readImages()).some((i) =>
       i.RepoTags[0]?.includes(DIVE_DOCKER_IMAGE)
     );
@@ -51,16 +60,26 @@ export function App() {
   };
 
   const pullDive = async () => {
+    if (!ddClient) {
+      return;
+    }
     setLoading(true);
     await ddClient.docker.cli.exec("pull", [DIVE_DOCKER_IMAGE]);
     setLoading(false);
     checkDiveInstallation();
   };
 
-  const readImages = async () =>
-    (await ddClient.docker.listImages()) as DockerImage[];
+  const readImages = async () => {
+    if (!ddClient) {
+      return [];
+    }
+    return (await ddClient.docker.listImages()) as DockerImage[];
+  };
 
   const getImages = async () => {
+    if (!ddClient) {
+      return;
+    }
     const all = await readImages();
     const images = all
       .filter((i) => i.RepoTags && i.RepoTags[0] !== "<none>:<none>")
@@ -69,6 +88,9 @@ export function App() {
   };
 
   const analyze = async (image: Image) => {
+    if (!ddClient) {
+      return;
+    }
     const result = await ddClient.docker.cli.exec("run", [
       "--rm",
       "-v",
@@ -158,9 +180,12 @@ export function App() {
   );
 
   useEffect(() => {
+    if (!ddClient) {
+      return;
+    }
     checkDiveInstallation();
     getImages();
-  }, []);
+  }, [ddClient]);
 
   const clearAnalysis = () => {
     setAnalysisResult(undefined);
@@ -174,6 +199,21 @@ export function App() {
         contents, and discover ways to shrink the size of your Docker/OCI image.
       </Typography>
       <Divider sx={{ mt: 4, mb: 4 }} orientation="horizontal" flexItem />
+      {!ddClient ? (
+        <Stack spacing={2}>
+          <Alert severity="error">
+            This UI must be run inside Docker Desktop. The extension API client
+            is unavailable in a regular browser.
+          </Alert>
+          <Alert severity="info">
+            Load the extension in Docker Desktop, then re-open this tab. See
+            README for local dev steps.
+          </Alert>
+          {clientError ? (
+            <Alert severity="warning">Details: {clientError}</Alert>
+          ) : null}
+        </Stack>
+      ) : null}
       {isLoading ? (
         <Stack sx={{ mt: 4 }} direction="column" alignItems="center">
           <CircularProgress />
@@ -181,7 +221,7 @@ export function App() {
       ) : (
         <></>
       )}
-      {!isHiveInstalled ? (
+      {!ddClient ? null : !isHiveInstalled ? (
         <HiveInstaller></HiveInstaller>
       ) : analysis ? (
         <Analysis onExit={clearAnalysis} analysis={analysis}></Analysis>
