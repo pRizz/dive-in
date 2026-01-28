@@ -48,10 +48,10 @@ Plans:
   2. User can choose the image source (Docker engine or archive) and run analysis.
   3. User can see analysis job status/progress while it runs.
   4. User receives clear, actionable error messages when analysis fails.
-**Plans**: TBD
+**Plans**: 1
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md — Add async analysis jobs with status + source selection
 
 ### Phase 3: Core Insights UI
 **Goal**: Users can explore layers and metrics in a Docker Desktop-native UI.
