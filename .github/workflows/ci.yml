@@ -28,6 +28,10 @@ jobs:
           rm -rf node_modules package-lock.json
           npm_config_optional=true npm install --include=optional
 
+      - name: Install Rollup Linux binary
+        working-directory: ui
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu@4.57.0
+
       - name: Lint UI
         working-directory: ui
         run: npm run lint
