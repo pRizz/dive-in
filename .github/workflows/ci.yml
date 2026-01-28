@@ -50,3 +50,70 @@ jobs:
       - name: Vet Go
         working-directory: vm
         run: go vet ./...
+
+      - name: Build extension image
+        run: docker build -t dive-in:ci .
+
+      - name: Install Docker Extensions CLI
+        run: |
+          set -euo pipefail
+          RELEASE_JSON=$(curl -fsSL https://api.github.com/repos/docker/extension-sdk/releases/latest)
+          ASSET_URL=$(python - <<'PY'
+import json
+import os
+import re
+data = json.loads(os.environ["RELEASE_JSON"])
+assets = data.get("assets", [])
+pattern = re.compile(r"linux-amd64$")
+for asset in assets:
+    name = asset.get("name", "")
+    if pattern.search(name):
+        print(asset.get("browser_download_url", ""))
+        break
+PY
+          )
+          if [ -z "$ASSET_URL" ]; then
+            echo "Docker Extensions CLI asset not found." >&2
+            exit 1
+          fi
+          CLI_PATH=$(ASSET_URL="$ASSET_URL" python - <<'PY'
+import os
+import tarfile
+import tempfile
+import urllib.request
+
+url = os.environ["ASSET_URL"]
+tmpdir = tempfile.mkdtemp()
+archive_path = os.path.join(tmpdir, "docker-extension-asset")
+urllib.request.urlretrieve(url, archive_path)
+
+out_path = os.path.join(tmpdir, "docker-extension")
+if url.endswith((".tar.gz", ".tgz")):
+    with tarfile.open(archive_path, "r:gz") as tar:
+        members = [m for m in tar.getmembers() if os.path.basename(m.name) == "docker-extension"]
+        if not members:
+            raise SystemExit("docker-extension binary not found in archive")
+        member = members[0]
+        member.name = os.path.basename(member.name)
+        tar.extract(member, path=tmpdir)
+        out_path = os.path.join(tmpdir, "docker-extension")
+else:
+    os.rename(archive_path, out_path)
+
+os.chmod(out_path, 0o755)
+print(out_path)
+PY
+          )
+          if [ -z "$CLI_PATH" ]; then
+            echo "Docker Extensions CLI binary missing after download." >&2
+            exit 1
+          fi
+          sudo mv "$CLI_PATH" /usr/local/bin/docker-extension
+          mkdir -p "$HOME/.docker/cli-plugins"
+          ln -sf /usr/local/bin/docker-extension "$HOME/.docker/cli-plugins/docker-extension"
+
+      - name: Verify Docker Extensions CLI
+        run: docker extension version
+
+      - name: Validate extension image
+        run: docker extension validate dive-in:ci
