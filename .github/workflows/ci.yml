@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.0"
+          cache: "npm"
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install UI dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Lint UI
+        working-directory: ui
+        run: npm run lint
+
+      - name: Test UI
+        working-directory: ui
+        run: npm run test -- --run
+
+      - name: Build UI
+        working-directory: ui
+        run: npm run build
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: vm/go.mod
+
+      - name: Test Go
+        working-directory: vm
+        run: go test ./...
+
+      - name: Vet Go
+        working-directory: vm
+        run: go vet ./...
