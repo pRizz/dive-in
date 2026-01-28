@@ -25,6 +25,7 @@ jobs:
       - name: Install UI dependencies
         working-directory: ui
         run: |
+          rm -rf node_modules package-lock.json
           npm_config_optional=true npm install --include=optional
 
       - name: Lint UI
