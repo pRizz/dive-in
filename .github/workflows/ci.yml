@@ -15,6 +15,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate metadata.json schema
+        run: |
+          if docker extension version >/dev/null 2>&1; then
+            docker extension validate ./metadata.json
+          else
+            echo "docker extension CLI not available" >&2
+            exit 1
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -64,5 +76,6 @@ jobs:
           if docker extension version >/dev/null 2>&1; then
             docker extension validate dive-in:ci
           else
-            node scripts/validate-extension.mjs dive-in:ci metadata.json
+            echo "docker extension CLI not available" >&2
+            exit 1
           fi

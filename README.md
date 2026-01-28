@@ -15,6 +15,15 @@ Make sure your Docker desktop supports extensions. This extension can be install
 
 Go through [the official docs](https://docs.docker.com/desktop/extensions-sdk/quickstart/) to understand the basic setting up of the Docker extension.
 
+### Local development
+
+1. Install UI dependencies: `cd ui && npm install`
+2. Run the UI dev server: `npm run dev`
+3. Build the extension image from the repo root: `docker build -t dive-in:dev .`
+4. Load the local extension into Docker Desktop: `docker extension install dive-in:dev`
+
+To update a local install, rebuild and re-run the install command.
+
 Useful commands for setting up debugging
 
 ```
@@ -22,4 +31,4 @@ $ docker extension dev debug prakhar1989/dive-in
 $ docker extension dev ui-source prakhar1989/dive-in http://localhost:3000
 ```
 
-Make sure you run `npm run start` in the `ui/` folder.
+Make sure you run `npm run dev` in the `ui/` folder.
