@@ -204,10 +204,10 @@ export function App() {
       return data;
     }
     if (data instanceof Uint8Array) {
-      return data;
+      return new Uint8Array(data).buffer;
     }
     if (data instanceof ArrayBuffer) {
-      return new Uint8Array(data);
+      return data;
     }
     return JSON.stringify(data, null, 2);
   };
