@@ -18,6 +18,8 @@ export default function HistoryList(props: {
   isLoading: boolean;
   error?: string;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+  onDeleteAll: () => void;
   compareSelection?: CompareSelectionState;
   onCompareSelect?: (side: CompareSide, id: string) => void;
   onCompareClear?: (side: CompareSide) => void;
@@ -29,6 +31,8 @@ export default function HistoryList(props: {
     isLoading,
     error,
     onSelect,
+    onDelete,
+    onDeleteAll,
     compareSelection,
     onCompareSelect,
     onCompareClear,
@@ -36,6 +40,15 @@ export default function HistoryList(props: {
     disabled,
   } = props;
   const [filter, setFilter] = useState("");
+  const chipLabelSx = {
+    height: "auto",
+    "& .MuiChip-label": {
+      fontSize: "0.95rem",
+      lineHeight: 1.4,
+      paddingInline: 2,
+      paddingBlock: 1,
+    },
+  };
 
   const filteredEntries = useMemo(() => {
     const trimmed = filter.trim().toLowerCase();
@@ -69,6 +82,14 @@ export default function HistoryList(props: {
       <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
         <Typography variant="h3">History</Typography>
         <Button
+          variant="outlined"
+          color="error"
+          onClick={onDeleteAll}
+          disabled={disabled || entries.length === 0}
+        >
+          Delete all
+        </Button>
+        <Button
           variant="contained"
           onClick={() =>
             compareSelection?.leftId &&
@@ -88,6 +109,11 @@ export default function HistoryList(props: {
           disabled={disabled}
         />
       </Stack>
+      <Alert severity="info">
+        History is stored in the extension volume under `/data/history` and is
+        retained across restarts. Delete entries here to remove them from this
+        machine.
+      </Alert>
       {selectionHint ? (
         <Typography variant="body2" color="text.secondary">
           {selectionHint}
@@ -120,32 +146,38 @@ export default function HistoryList(props: {
                     {isBaseline || isTarget ? (
                       <Stack direction="row" spacing={1} flexWrap="wrap">
                         {isBaseline ? (
-                          <Chip label="Baseline" size="small" color="primary" />
+                          <Chip label="Baseline" size="medium" color="primary" />
                         ) : null}
                         {isTarget ? (
-                          <Chip label="Target" size="small" color="secondary" />
+                          <Chip label="Target" size="medium" color="secondary" />
                         ) : null}
                       </Stack>
                     ) : null}
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                       <Chip
                         label={`Size: ${formatBytes(entry.summary.sizeBytes)}`}
-                        size="small"
+                        size="medium"
+                        sx={chipLabelSx}
                       />
                       <Chip
                         label={`Wasted: ${formatBytes(
                           entry.summary.inefficientBytes
                         )}`}
-                        size="small"
+                        size="medium"
+                        sx={chipLabelSx}
                       />
-                      <Chip label={`Efficiency: ${efficiency}`} size="small" />
-                      <Chip label={entry.source} size="small" />
+                      <Chip
+                        label={`Efficiency: ${efficiency}`}
+                        size="medium"
+                        sx={chipLabelSx}
+                      />
+                      <Chip label={entry.source} size="medium" sx={chipLabelSx} />
                     </Stack>
                   </Stack>
                 </CardContent>
                 <CardActions>
                   <Button
-                    size="small"
+                    size="medium"
                     variant="outlined"
                     onClick={() => onSelect(entry.id)}
                     disabled={disabled}
@@ -153,7 +185,16 @@ export default function HistoryList(props: {
                     Open analysis
                   </Button>
                   <Button
-                    size="small"
+                    size="medium"
+                    variant="outlined"
+                    color="error"
+                    onClick={() => onDelete(entry.id)}
+                    disabled={disabled}
+                  >
+                    Delete
+                  </Button>
+                  <Button
+                    size="medium"
                     variant={isBaseline ? "contained" : "outlined"}
                     onClick={() =>
                       isBaseline
@@ -165,7 +206,7 @@ export default function HistoryList(props: {
                     {isBaseline ? "Baseline" : "Set baseline"}
                   </Button>
                   <Button
-                    size="small"
+                    size="medium"
                     variant={isTarget ? "contained" : "outlined"}
                     onClick={() =>
                       isTarget

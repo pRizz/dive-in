@@ -166,6 +166,76 @@ export function App() {
     }
   };
 
+  const clearHistorySelections = (ids: string[]) => {
+    if (ids.length === 0) {
+      return;
+    }
+    setCompareSelection((prev) => {
+      const next = { ...prev };
+      if (ids.includes(prev.leftId ?? "")) {
+        delete next.leftId;
+      }
+      if (ids.includes(prev.rightId ?? "")) {
+        delete next.rightId;
+      }
+      return next;
+    });
+    if (selectedHistoryId && ids.includes(selectedHistoryId)) {
+      setSelectedHistoryId(undefined);
+      setAnalysisResult(undefined);
+      setCompareIds(undefined);
+      resetJobState();
+    }
+  };
+
+  const deleteHistoryEntry = async (id: string) => {
+    if (!ddClient?.extension?.vm?.service) {
+      setHistoryError("Backend API is unavailable.");
+      return;
+    }
+    const confirmed = window.confirm(
+      "Delete this history entry from this machine?"
+    );
+    if (!confirmed) {
+      return;
+    }
+    setHistoryLoading(true);
+    try {
+      await ddClient.extension.vm.service.delete(`/history/${id}`);
+      setHistoryEntries((prev) => prev.filter((entry) => entry.id !== id));
+      clearHistorySelections([id]);
+      setHistoryError(undefined);
+    } catch (error) {
+      setHistoryError(getErrorMessage(error));
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const deleteAllHistory = async () => {
+    if (!ddClient?.extension?.vm?.service) {
+      setHistoryError("Backend API is unavailable.");
+      return;
+    }
+    const confirmed = window.confirm(
+      "Delete all history entries from this machine?"
+    );
+    if (!confirmed) {
+      return;
+    }
+    setHistoryLoading(true);
+    try {
+      await ddClient.extension.vm.service.delete("/history");
+      clearHistorySelections(historyEntries.map((entry) => entry.id));
+      setHistoryEntries([]);
+      setHistoryError(undefined);
+    } catch (error) {
+      setHistoryError(getErrorMessage(error));
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const openHistoryEntry = async (id: string) => {
     if (!ddClient?.extension?.vm?.service) {
       setHistoryError("Backend API is unavailable.");
@@ -716,6 +786,8 @@ export function App() {
             isLoading={isHistoryLoading}
             error={historyError}
             onSelect={openHistoryEntry}
+            onDelete={deleteHistoryEntry}
+            onDeleteAll={deleteAllHistory}
             compareSelection={compareSelection}
             onCompareSelect={updateCompareSelection}
             onCompareClear={clearCompareSelection}

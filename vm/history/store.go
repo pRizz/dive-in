@@ -151,6 +151,16 @@ func (s *Store) Delete(id string) error {
 	return nil
 }
 
+func (s *Store) DeleteAll() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := os.RemoveAll(s.dir); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
 func (s *Store) pruneLocked() error {
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {

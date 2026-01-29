@@ -146,6 +146,7 @@ func main() {
 	router.GET("/analysis/:id/status", getAnalysisStatus)
 	router.GET("/analysis/:id/result", getAnalysisResult)
 	router.GET("/history", listHistory)
+	router.DELETE("/history", deleteHistoryAll)
 	router.GET("/history/:id", getHistoryEntry)
 	router.DELETE("/history/:id", deleteHistoryEntry)
 	router.POST("/history/:id/export", createHistoryExport)
@@ -359,6 +360,13 @@ func getHistoryEntry(c echo.Context) error {
 		return jsonError(c, http.StatusInternalServerError, "Failed to load history entry")
 	}
 	return c.JSON(http.StatusOK, entry)
+}
+
+func deleteHistoryAll(c echo.Context) error {
+	if err := historyStore.DeleteAll(); err != nil {
+		return jsonError(c, http.StatusInternalServerError, "Failed to delete history")
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 func deleteHistoryEntry(c echo.Context) error {
