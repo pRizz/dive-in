@@ -17,6 +17,8 @@ import {
   FormControlLabel,
   FormLabel,
   LinearProgress,
+  Link,
+  MenuItem,
   Radio,
   RadioGroup,
   Tab,
@@ -29,6 +31,7 @@ import CompareView from "./compare";
 import CIGateDialog from "./cigatedialog";
 import ExportDialog from "./exportdialog";
 import HistoryList from "./history";
+import { GITHUB_URL, LINKEDIN_URL, MEDIUM_URL, TWITTER_URL } from "./constants";
 import { extractId, formatBytes, formatRelativeTimeFromNow, getErrorMessage } from "./utils";
 import {
   AnalysisResult,
@@ -518,6 +521,8 @@ export function App() {
 
   const ImageList = () => {
     const [filter, setFilter] = useState("");
+    const [sortBy, setSortBy] = useState<"name" | "created" | "size">("created");
+    const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
     const filteredImages = useMemo(() => {
       const trimmed = filter.trim().toLowerCase();
       if (!trimmed) {
@@ -527,27 +532,101 @@ export function App() {
         image.name.toLowerCase().includes(trimmed)
       );
     }, [filter, images]);
+    const sortedImages = useMemo(() => {
+      const copy = [...filteredImages];
+      const direction = sortDirection === "asc" ? 1 : -1;
+      copy.sort((left, right) => {
+        if (sortBy === "name") {
+          return left.name.localeCompare(right.name) * direction;
+        }
+        if (sortBy === "created") {
+          const leftValue = left.createdAt ?? 0;
+          const rightValue = right.createdAt ?? 0;
+          return (leftValue - rightValue) * direction;
+        }
+        const leftValue = left.sizeBytes ?? 0;
+        const rightValue = right.sizeBytes ?? 0;
+        return (leftValue - rightValue) * direction;
+      });
+      return copy;
+    }, [filteredImages, sortBy, sortDirection]);
 
     return (
       <>
         <Typography variant="h3" sx={{ mb: 2 }}>
           Choose an image below to get started
         </Typography>
-        <TextField
-          label="Filter by image name"
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-          size="small"
-          sx={{ mb: 2, maxWidth: 360 }}
-          disabled={isJobActive}
-        />
-        <Grid container spacing={2} alignItems="stretch">
-          {filteredImages.map((image) => (
-            <Grid item xs={12} md={6} key={image.id}>
-              <ImageCard image={image}></ImageCard>
-            </Grid>
-          ))}
-        </Grid>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ mb: 2 }}
+        >
+          <TextField
+            label="Filter by image name"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            size="small"
+            sx={{ minWidth: 240 }}
+            disabled={isJobActive}
+          />
+          <TextField
+            select
+            label="Sort by"
+            value={sortBy}
+            onChange={(event) =>
+              setSortBy(event.target.value as "name" | "created" | "size")
+            }
+            size="small"
+            sx={{ minWidth: 160 }}
+            disabled={isJobActive}
+          >
+            <MenuItem value="name">Name</MenuItem>
+            <MenuItem value="created">Build time</MenuItem>
+            <MenuItem value="size">Size</MenuItem>
+          </TextField>
+          <TextField
+            select
+            label="Direction"
+            value={sortDirection}
+            onChange={(event) =>
+              setSortDirection(event.target.value as "asc" | "desc")
+            }
+            size="small"
+            sx={{ minWidth: 140 }}
+            disabled={isJobActive}
+          >
+            <MenuItem value="asc">Ascending</MenuItem>
+            <MenuItem value="desc">Descending</MenuItem>
+          </TextField>
+          <Button
+            variant="outlined"
+            onClick={getImages}
+            disabled={isJobActive}
+          >
+            Refresh list
+          </Button>
+        </Stack>
+        {images.length === 0 ? (
+          <Alert severity="info">
+            No images found. Build or pull an image with Docker, then refresh the
+            list.
+          </Alert>
+        ) : sortedImages.length === 0 ? (
+          <Alert severity="info">
+            No images match the current filter. Clear the filter to see all
+            images.
+          </Alert>
+        ) : (
+          <Grid container spacing={2} alignItems="stretch">
+            {sortedImages.map((image) => (
+              <Grid item xs={12} md={6} key={`${image.id}-${image.name}`}>
+                <ImageCard image={image}></ImageCard>
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </>
     );
   };
@@ -926,6 +1005,46 @@ export function App() {
           </Box>
         </>
       )}
+      <Divider sx={{ mt: 6, mb: 3 }} />
+      <Stack spacing={1} sx={{ textAlign: "center", pb: 4 }}>
+        <Typography variant="body2" color="text.secondary">
+          All analysis runs locally in Docker Desktop.{" "}
+          <Typography component="span" color="text.primary">
+            Your images never leave your machine.
+          </Typography>
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Free &amp; open source on{" "}
+          <Link href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+            GitHub
+          </Link>
+          .
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Made by{" "}
+          <Typography component="span" color="text.primary">
+            Peter Ryszkiewicz
+          </Typography>
+          {" "}forked from{" "}
+          <Link href="https://github.com/prakhar1989/dive-in" target="_blank" rel="noopener noreferrer">
+            Prakhar Srivastav&apos;s work
+          </Link>
+        </Typography>
+        <Stack direction="row" spacing={2} justifyContent="center">
+          <Link href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+            GitHub
+          </Link>
+          <Link href={LINKEDIN_URL} target="_blank" rel="noopener noreferrer">
+            LinkedIn
+          </Link>
+          <Link href={TWITTER_URL} target="_blank" rel="noopener noreferrer">
+            Twitter/X
+          </Link>
+          <Link href={MEDIUM_URL} target="_blank" rel="noopener noreferrer">
+            Medium
+          </Link>
+        </Stack>
+      </Stack>
     </>
   );
 }
