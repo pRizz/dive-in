@@ -22,9 +22,8 @@ import {
 } from "@mui/material";
 
 import Analysis from "./analysis";
-import { extractId, joinUrl } from "./utils";
+import { extractId } from "./utils";
 import {
-  AnalysisErrorResponse,
   AnalysisResult,
   AnalysisSource,
   AnalyzeRequest,
@@ -55,7 +54,6 @@ export function App() {
   const [clientError, setClientError] = useState<string | undefined>(
     undefined
   );
-  const [apiBaseUrl, setApiBaseUrl] = useState<string | undefined>(undefined);
   const [source, setSource] = useState<AnalysisSource>("docker");
   const [archivePath, setArchivePath] = useState<string>("");
   const [jobId, setJobId] = useState<string | undefined>(undefined);
@@ -72,28 +70,13 @@ export function App() {
     }
   }, []);
 
-  const getResponseMessage = async (response: Response) => {
-    try {
-      const data = (await response.json()) as AnalysisErrorResponse;
-      if (data?.message) {
-        return data.message;
-      }
-    } catch (error) {
-      console.log(error);
-    }
-    return `${response.status} ${response.statusText}`.trim();
-  };
-
   const checkDiveInstallation = async () => {
-    if (!apiBaseUrl) {
+    if (!ddClient?.extension?.vm?.service) {
       return;
     }
     setCheckingDive(true);
     try {
-      const response = await fetch(joinUrl(apiBaseUrl, "/checkdive"));
-      if (!response.ok) {
-        throw new Error(await getResponseMessage(response));
-      }
+      await ddClient.extension.vm.service.get("/checkdive");
       setDiveInstalled(true);
       setClientError(undefined);
     } catch (error) {
@@ -147,32 +130,31 @@ export function App() {
   };
 
   const fetchAnalysisResult = async (currentJobId: string) => {
-    if (!apiBaseUrl) {
+    if (!ddClient?.extension?.vm?.service) {
       return;
     }
-    const response = await fetch(
-      joinUrl(apiBaseUrl, `/analysis/${currentJobId}/result`)
-    );
-    if (!response.ok) {
+    try {
+      const dive = (await ddClient.extension.vm.service.get(
+        `/analysis/${currentJobId}/result`
+      )) as DiveResponse;
+      setAnalysisResult({
+        image: {
+          name: jobTarget ?? "Unknown image",
+          id: currentJobId,
+        },
+        dive,
+      });
+    } catch (error) {
       setJobStatus("failed");
-      setJobMessage(await getResponseMessage(response));
-      return;
+      setJobMessage(getErrorMessage(error));
     }
-    const dive = (await response.json()) as DiveResponse;
-    setAnalysisResult({
-      image: {
-        name: jobTarget ?? "Unknown image",
-        id: currentJobId,
-      },
-      dive,
-    });
   };
 
   const startAnalysis = async (
     target: string,
     selectedSource: AnalysisSource
   ) => {
-    if (!apiBaseUrl) {
+    if (!ddClient?.extension?.vm?.service) {
       setJobStatus("failed");
       setJobMessage("Backend API is unavailable.");
       return;
@@ -188,21 +170,17 @@ export function App() {
     setJobTarget(target);
     setJobStatus("queued");
 
-    const response = await fetch(joinUrl(apiBaseUrl, "/analyze"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
+    try {
+      const data = (await ddClient.extension.vm.service.post(
+        "/analyze",
+        payload
+      )) as AnalyzeResponse;
+      setJobId(data.jobId);
+      setJobStatus(data.status);
+    } catch (error) {
       setJobStatus("failed");
-      setJobMessage(await getResponseMessage(response));
-      return;
+      setJobMessage(getErrorMessage(error));
     }
-
-    const data = (await response.json()) as AnalyzeResponse;
-    setJobId(data.jobId);
-    setJobStatus(data.status);
   };
 
   function ImageCard(props: { image: Image }) {
@@ -320,26 +298,16 @@ export function App() {
     if (!ddClient) {
       return;
     }
-    if (!ddClient.extension?.vm?.service?.getURL) {
-      setClientError("Backend service URL is unavailable.");
-      return;
-    }
-    ddClient.extension.vm.service
-      .getURL()
-      .then((url) => setApiBaseUrl(url))
-      .catch((error) => setClientError(getErrorMessage(error)));
-  }, [ddClient]);
-
-  useEffect(() => {
-    if (!apiBaseUrl || !ddClient) {
+    if (!ddClient.extension?.vm?.service) {
+      setClientError("Backend service is unavailable.");
       return;
     }
     checkDiveInstallation();
     getImages();
-  }, [apiBaseUrl, ddClient]);
+  }, [ddClient]);
 
   useEffect(() => {
-    if (!apiBaseUrl || !jobId) {
+    if (!ddClient?.extension?.vm?.service || !jobId) {
       return;
     }
     if (jobStatus !== "queued" && jobStatus !== "running") {
@@ -348,18 +316,18 @@ export function App() {
 
     let isCancelled = false;
     const pollStatus = async () => {
-      const response = await fetch(
-        joinUrl(apiBaseUrl, `/analysis/${jobId}/status`)
-      );
-      if (!response.ok) {
+      let status: AnalysisStatusResponse;
+      try {
+        status = (await ddClient.extension.vm.service.get(
+          `/analysis/${jobId}/status`
+        )) as AnalysisStatusResponse;
+      } catch (error) {
         if (!isCancelled) {
           setJobStatus("failed");
-          setJobMessage(await getResponseMessage(response));
+          setJobMessage(getErrorMessage(error));
         }
         return;
       }
-
-      const status = (await response.json()) as AnalysisStatusResponse;
       if (isCancelled) {
         return;
       }
@@ -378,7 +346,7 @@ export function App() {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [apiBaseUrl, jobId, jobStatus]);
+  }, [ddClient, jobId, jobStatus]);
 
   const clearAnalysis = () => {
     setAnalysisResult(undefined);
