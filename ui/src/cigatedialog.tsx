@@ -11,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import { CIRulesRequest, CIRulesResponse } from "./models";
+import { getErrorMessage } from "./utils";
 
 export default function CIGateDialog(props: {
   open: boolean;
@@ -67,7 +68,7 @@ export default function CIGateDialog(props: {
       setPreview(response.content);
       setFilename(response.filename);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(getErrorMessage(err));
     } finally {
       setGenerating(false);
     }
@@ -88,6 +89,11 @@ export default function CIGateDialog(props: {
           <Typography variant="body2" color="text.secondary">
             Set one or more thresholds to generate a `.dive-ci` file.
           </Typography>
+          <Alert severity="info">
+            Save the generated `.dive-ci` at the root of your repository. Dive reads
+            it during CI runs (for example, in GitHub Actions) to fail builds when
+            the image exceeds the thresholds you set here.
+          </Alert>
           <TextField
             label="Lowest efficiency (0-1)"
             value={lowestEfficiency}

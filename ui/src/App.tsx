@@ -26,7 +26,7 @@ import CompareView from "./compare";
 import CIGateDialog from "./cigatedialog";
 import ExportDialog from "./exportdialog";
 import HistoryList from "./history";
-import { extractId } from "./utils";
+import { extractId, getErrorMessage } from "./utils";
 import {
   AnalysisResult,
   AnalysisSource,
@@ -52,35 +52,6 @@ interface DockerImage {
   Id: string;
   RepoDigests?: string[];
 }
-
-const getErrorMessage = (error: unknown) => {
-  if (typeof error === "string") {
-    return error;
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  if (error && typeof error === "object") {
-    const maybeMessage = (error as { message?: unknown }).message;
-    if (typeof maybeMessage === "string") {
-      return maybeMessage;
-    }
-    const maybeCapitalMessage = (error as { Message?: unknown }).Message;
-    if (typeof maybeCapitalMessage === "string") {
-      return maybeCapitalMessage;
-    }
-
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
-
-  return String(error);
-};
 
 export function App() {
   const [analysis, setAnalysisResult] = useState<AnalysisResult | undefined>(

@@ -48,6 +48,35 @@ export function joinUrl(base: string, path: string) {
   return `${trimmedBase}${trimmedPath}`;
 }
 
+export function getErrorMessage(error: unknown) {
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const maybeMessage = (error as { message?: unknown }).message;
+    if (typeof maybeMessage === "string") {
+      return maybeMessage;
+    }
+    const maybeCapitalMessage = (error as { Message?: unknown }).Message;
+    if (typeof maybeCapitalMessage === "string") {
+      return maybeCapitalMessage;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
+  return String(error);
+}
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
