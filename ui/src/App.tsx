@@ -15,6 +15,7 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
+  LinearProgress,
   Radio,
   RadioGroup,
   TextField,
@@ -167,7 +168,10 @@ export function App() {
     });
   };
 
-  const startAnalysis = async (target: string, selectedSource: AnalysisSource) => {
+  const startAnalysis = async (
+    target: string,
+    selectedSource: AnalysisSource
+  ) => {
     if (!apiBaseUrl) {
       setJobStatus("failed");
       setJobMessage("Backend API is unavailable.");
@@ -181,6 +185,8 @@ export function App() {
 
     setJobMessage(undefined);
     setAnalysisResult(undefined);
+    setJobTarget(target);
+    setJobStatus("queued");
 
     const response = await fetch(joinUrl(apiBaseUrl, "/analyze"), {
       method: "POST",
@@ -197,7 +203,6 @@ export function App() {
     const data = (await response.json()) as AnalyzeResponse;
     setJobId(data.jobId);
     setJobStatus(data.status);
-    setJobTarget(target);
   };
 
   function ImageCard(props: { image: Image }) {
@@ -241,6 +246,14 @@ export function App() {
               </Button>
             </Box>
           </CardActions>
+          {jobTarget === props.image.name && jobStatus ? (
+            <CardContent sx={{ pt: 0 }}>
+              <Typography variant="caption" color="text.secondary">
+                Status: {jobStatus}
+              </Typography>
+              {isJobActive ? <LinearProgress sx={{ mt: 1 }} /> : null}
+            </CardContent>
+          ) : null}
         </Card>
       </>
     );
@@ -271,25 +284,35 @@ export function App() {
         onChange={(event) => setArchivePath(event.target.value)}
         fullWidth
       />
-      <Button
-        variant="outlined"
-        disabled={isJobActive || archivePath.trim() === ""}
-        onClick={() => startAnalysis(archivePath.trim(), "docker-archive")}
-      >
-        Analyze archive
-        {isJobActive && jobTarget === archivePath.trim() && (
-          <CircularProgress
-            size={24}
-            sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              marginTop: "-12px",
-              marginLeft: "-12px",
-            }}
-          />
-        )}
-      </Button>
+      <Box sx={{ position: "relative" }}>
+        <Button
+          variant="outlined"
+          disabled={isJobActive || archivePath.trim() === ""}
+          onClick={() => startAnalysis(archivePath.trim(), "docker-archive")}
+        >
+          Analyze archive
+          {isJobActive && jobTarget === archivePath.trim() && (
+            <CircularProgress
+              size={24}
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                marginTop: "-12px",
+                marginLeft: "-12px",
+              }}
+            />
+          )}
+        </Button>
+      </Box>
+      {jobTarget === archivePath.trim() && jobStatus ? (
+        <Stack spacing={1}>
+          <Typography variant="caption" color="text.secondary">
+            Status: {jobStatus}
+          </Typography>
+          {isJobActive ? <LinearProgress /> : null}
+        </Stack>
+      ) : null}
     </Stack>
   );
 
@@ -364,6 +387,63 @@ export function App() {
 
   const isJobActive = jobStatus === "queued" || jobStatus === "running";
 
+  const errorHint = (() => {
+    if (!jobMessage) {
+      return undefined;
+    }
+    const lowered = jobMessage.toLowerCase();
+    if (lowered.includes("timed out")) {
+      return "Try a smaller image or rerun when the engine is less busy.";
+    }
+    if (lowered.includes("binary not found")) {
+      return "Install the Dive CLI in the backend VM, then retry.";
+    }
+    if (lowered.includes("archive")) {
+      return "Double-check the archive path and ensure the file exists.";
+    }
+    return undefined;
+  })();
+
+  const handleRetry = () => {
+    resetJobState();
+    setAnalysisResult(undefined);
+  };
+
+  const handleCancel = () => {
+    resetJobState();
+    setAnalysisResult(undefined);
+  };
+
+  const statusAlert = jobStatus ? (
+    <Alert
+      severity={jobStatus === "failed" ? "error" : "info"}
+      action={
+        jobStatus === "failed" ? (
+          <Button color="inherit" size="small" onClick={handleRetry}>
+            Retry
+          </Button>
+        ) : isJobActive ? (
+          <Button color="inherit" size="small" onClick={handleCancel}>
+            Stop waiting
+          </Button>
+        ) : null
+      }
+    >
+      <Stack spacing={0.5}>
+        <Typography variant="body2">
+          Status: {jobStatus}
+          {jobTarget ? ` — ${jobTarget}` : ""}
+        </Typography>
+        {jobMessage ? (
+          <Typography variant="body2">{jobMessage}</Typography>
+        ) : null}
+        {errorHint ? (
+          <Typography variant="body2">{errorHint}</Typography>
+        ) : null}
+      </Stack>
+    </Alert>
+  ) : null;
+
   return (
     <>
       <Typography variant="h1">Dive-In</Typography>
@@ -372,6 +452,7 @@ export function App() {
         contents, and discover ways to shrink the size of your Docker/OCI image.
       </Typography>
       <Divider sx={{ mt: 4, mb: 4 }} orientation="horizontal" flexItem />
+      {!ddClient ? null : statusAlert}
       {!ddClient ? (
         <Stack spacing={2}>
           <Alert severity="error">
