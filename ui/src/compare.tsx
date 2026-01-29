@@ -74,6 +74,7 @@ export default function CompareView(props: {
   );
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [scoutError, setScoutError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const fetchEntries = async () => {
@@ -117,6 +118,23 @@ export default function CompareView(props: {
       ),
     [leftEntry, rightEntry]
   );
+
+  const handleOpenScout = async () => {
+    setScoutError(undefined);
+    if (!client?.host?.openExternal) {
+      setScoutError(
+        "Docker Scout requires Docker Desktop sign-in and Scout enablement."
+      );
+      return;
+    }
+    try {
+      await client.host.openExternal("https://scout.docker.com/");
+    } catch (openError) {
+      setScoutError(getErrorMessage(openError));
+    }
+  };
+
+  const scoutUnavailable = !client?.host?.openExternal;
 
   return (
     <Stack spacing={3}>
@@ -269,6 +287,24 @@ export default function CompareView(props: {
                 </Table>
               </TableContainer>
             )}
+          </Stack>
+          <Stack spacing={2}>
+            <Typography variant="h3">Docker Scout</Typography>
+            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+              <Button
+                variant="outlined"
+                onClick={handleOpenScout}
+                disabled={scoutUnavailable}
+              >
+                Open in Scout
+              </Button>
+              {scoutUnavailable ? (
+                <Typography variant="body2" color="text.secondary">
+                  Docker Scout requires Docker Desktop sign-in and enablement.
+                </Typography>
+              ) : null}
+            </Stack>
+            {scoutError ? <Alert severity="warning">{scoutError}</Alert> : null}
           </Stack>
         </>
       ) : null}
