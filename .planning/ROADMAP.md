@@ -75,10 +75,10 @@ Plans:
   1. User can view saved analysis history per image/tag.
   2. User can export analysis reports (JSON/HTML) and share a summary.
   3. User can generate CI thresholds or `.dive-ci` rules from analysis.
-**Plans**: TBD
+**Plans**: 1
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md — Add history, export, and CI gate actions
 
 ### Phase 5: Compare + Scout Handoff
 **Goal**: Users can compare images and hand off to Docker Scout when available.
