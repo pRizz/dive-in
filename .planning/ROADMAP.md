@@ -62,10 +62,10 @@ Plans:
   2. User can view efficiency and wasted-space metrics for an image.
   3. User sees a Docker Desktop-native UI with light/dark support.
   4. User can access basic help/usage links from the UI.
-**Plans**: TBD
+**Plans**: 1
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Add core insights UI for layers and metrics
 
 ### Phase 4: History + Export + CI Gates
 **Goal**: Users can retain analyses and share or gate results.
