@@ -15,18 +15,22 @@ interface TableProps {
 
 export default function ImageTable(props: TableProps) {
   return (
-    <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }}>
+    <TableContainer component={Paper} variant="outlined">
+      <Table sx={{ minWidth: 650 }} size="small">
         <TableHead>
           <TableRow>
-            <TableCell sx={{fontWeight: 'bold'}}>Count</TableCell>
-            <TableCell sx={{fontWeight: 'bold'}} align="right">Total Space</TableCell>
-            <TableCell sx={{fontWeight: 'bold'}} align="right">Path</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>Count</TableCell>
+            <TableCell sx={{ fontWeight: 600 }} align="right">
+              Total Space
+            </TableCell>
+            <TableCell sx={{ fontWeight: 600 }} align="right">
+              Path
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {props.rows.map((row, i) => (
-            <TableRow key={i}>
+            <TableRow key={i} hover>
               <TableCell>{row.count}</TableCell>
               <TableCell align="right">
                 {formatBytes(row.sizeBytes)}

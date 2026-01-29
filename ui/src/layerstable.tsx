@@ -14,19 +14,21 @@ interface TableProps {
 
 export default function LayersTable(props: TableProps) {
   return (
-    <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }}>
+    <TableContainer component={Paper} variant="outlined">
+      <Table sx={{ minWidth: 650 }} size="small">
         <TableHead>
           <TableRow>
-            <TableCell sx={{fontWeight: 'bold'}}>Index</TableCell>
-            <TableCell sx={{fontWeight: 'bold'}}>ID</TableCell>
-            <TableCell sx={{fontWeight: 'bold'}}>Size</TableCell>
-            <TableCell sx={{fontWeight: 'bold'}} align="right">Command</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>Index</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>Size</TableCell>
+            <TableCell sx={{ fontWeight: 600 }} align="right">
+              Command
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {props.rows.map((row, i) => (
-            <TableRow key={i}>
+            <TableRow key={i} hover>
               <TableCell>{row.index}</TableCell>
               <TableCell>{extractId(row.id)}</TableCell>
               <TableCell>{formatBytes(row.sizeBytes)}</TableCell>

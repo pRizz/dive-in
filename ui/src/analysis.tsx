@@ -107,6 +107,9 @@ export default function Analysis(props: {
             </CardContent>
           </Card>
         </Stack>
+        <Typography variant="body2" color="text.secondary">
+          Metrics are derived from Dive analysis results.
+        </Typography>
         <Stack spacing={2}>
           <Typography variant="h3">Layer file tree</Typography>
           <FileTree
