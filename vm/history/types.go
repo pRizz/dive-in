@@ -7,9 +7,9 @@ import (
 )
 
 type Summary struct {
-	SizeBytes       int64   `json:"sizeBytes"`
-	InefficientBytes int64  `json:"inefficientBytes"`
-	EfficiencyScore float64 `json:"efficiencyScore"`
+	SizeBytes        int64   `json:"sizeBytes"`
+	InefficientBytes int64   `json:"inefficientBytes"`
+	EfficiencyScore  float64 `json:"efficiencyScore"`
 }
 
 type Metadata struct {
@@ -51,9 +51,9 @@ func NewEntry(id string, image string, source string, startedAt time.Time, compl
 		CreatedAt:   startedAt,
 		CompletedAt: completedAt,
 		Summary: Summary{
-			SizeBytes:       payload.Image.SizeBytes,
+			SizeBytes:        payload.Image.SizeBytes,
 			InefficientBytes: payload.Image.InefficientBytes,
-			EfficiencyScore: payload.Image.EfficiencyScore,
+			EfficiencyScore:  payload.Image.EfficiencyScore,
 		},
 	}
 

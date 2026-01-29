@@ -12,10 +12,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"dive-in/ci"
+	"dive-in/exports"
 	"dive-in/history"
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
@@ -106,6 +109,16 @@ type AnalysisErrorResponse struct {
 	Message string    `json:"message"`
 }
 
+type ExportRequest struct {
+	Format string `json:"format"`
+}
+
+type ExportResponse struct {
+	Format      string `json:"format"`
+	Filename    string `json:"filename"`
+	ContentType string `json:"contentType"`
+}
+
 var jobStore = NewJobStore()
 var historyStore = history.NewStore(historyDir, historyMaxEntries)
 
@@ -135,6 +148,9 @@ func main() {
 	router.GET("/history", listHistory)
 	router.GET("/history/:id", getHistoryEntry)
 	router.DELETE("/history/:id", deleteHistoryEntry)
+	router.POST("/history/:id/export", createHistoryExport)
+	router.GET("/history/:id/export/:format", downloadHistoryExport)
+	router.POST("/ci/rules", createCIRules)
 
 	if err := router.Start(startURL); err != nil {
 		logrus.WithError(err).Fatal("Server stopped")
@@ -357,6 +373,85 @@ func deleteHistoryEntry(c echo.Context) error {
 		return jsonError(c, http.StatusInternalServerError, "Failed to delete history entry")
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+func createHistoryExport(c echo.Context) error {
+	id := c.Param("id")
+	var req ExportRequest
+	if err := c.Bind(&req); err != nil {
+		return jsonError(c, http.StatusBadRequest, "Invalid export request payload")
+	}
+	format, err := exports.ParseFormat(req.Format)
+	if err != nil {
+		return jsonError(c, http.StatusBadRequest, err.Error())
+	}
+
+	entry, err := historyStore.Get(id)
+	if err != nil {
+		if errors.Is(err, history.ErrNotFound) {
+			return jsonError(c, http.StatusNotFound, "History entry not found")
+		}
+		return jsonError(c, http.StatusInternalServerError, "Failed to load history entry")
+	}
+
+	exported, err := exports.Generate(format, entry)
+	if err != nil {
+		return jsonError(c, http.StatusInternalServerError, "Failed to generate export")
+	}
+
+	exportDir := historyStore.ExportsDir(id)
+	if err := os.MkdirAll(exportDir, 0o755); err != nil {
+		return jsonError(c, http.StatusInternalServerError, "Failed to prepare export storage")
+	}
+	exportPath := filepath.Join(exportDir, exported.Filename)
+	if err := os.WriteFile(exportPath, exported.Data, 0o644); err != nil {
+		return jsonError(c, http.StatusInternalServerError, "Failed to store export")
+	}
+
+	return c.JSON(http.StatusOK, ExportResponse{
+		Format:      string(exported.Format),
+		Filename:    exported.Filename,
+		ContentType: exported.ContentType,
+	})
+}
+
+func downloadHistoryExport(c echo.Context) error {
+	id := c.Param("id")
+	formatParam := c.Param("format")
+	format, err := exports.ParseFormat(formatParam)
+	if err != nil {
+		return jsonError(c, http.StatusBadRequest, err.Error())
+	}
+
+	filename := exports.Filename(id, format)
+	exportPath := filepath.Join(historyStore.ExportsDir(id), filename)
+	data, err := os.ReadFile(exportPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return jsonError(c, http.StatusNotFound, "Export not found")
+		}
+		return jsonError(c, http.StatusInternalServerError, "Failed to read export")
+	}
+
+	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
+	return c.Blob(http.StatusOK, exports.ContentType(format), data)
+}
+
+func createCIRules(c echo.Context) error {
+	var req ci.RulesRequest
+	if err := c.Bind(&req); err != nil {
+		return jsonError(c, http.StatusBadRequest, "Invalid CI rules request payload")
+	}
+	content, err := ci.GenerateRules(req)
+	if err != nil {
+		return jsonError(c, http.StatusBadRequest, err.Error())
+	}
+
+	response := ci.RulesResponse{
+		Filename: ".dive-ci",
+		Content:  string(content),
+	}
+	return c.JSON(http.StatusOK, response)
 }
 
 func newJobID() string {
