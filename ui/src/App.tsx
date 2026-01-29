@@ -53,8 +53,34 @@ interface DockerImage {
   RepoDigests?: string[];
 }
 
-const getErrorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : String(error);
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const maybeMessage = (error as { message?: unknown }).message;
+    if (typeof maybeMessage === "string") {
+      return maybeMessage;
+    }
+    const maybeCapitalMessage = (error as { Message?: unknown }).Message;
+    if (typeof maybeCapitalMessage === "string") {
+      return maybeCapitalMessage;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
+  return String(error);
+};
 
 export function App() {
   const [analysis, setAnalysisResult] = useState<AnalysisResult | undefined>(
@@ -113,6 +139,8 @@ export function App() {
       setCheckingDive(false);
     }
   };
+
+  const isDiveMissing = clientError?.includes("Dive is not found");
 
   const readImages = async () => {
     if (!ddClient) {
@@ -631,6 +659,26 @@ export function App() {
           <Alert severity="warning">
             Dive is not available in the backend VM. Install it and try again.
           </Alert>
+          {isDiveMissing ? (
+            <Alert severity="info">
+              Install Dive in the backend VM image, rebuild the extension, and
+              reinstall it in Docker Desktop. See the Dive install docs for
+              package options and binaries.
+              <Box sx={{ mt: 1 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() =>
+                    ddClient?.host.openExternal(
+                      "https://github.com/wagoodman/dive#installation"
+                    )
+                  }
+                >
+                  Open Dive install docs
+                </Button>
+              </Box>
+            </Alert>
+          ) : null}
           {clientError ? (
             <Alert severity="info">Details: {clientError}</Alert>
           ) : null}
