@@ -1,10 +1,15 @@
 import {
+  CompareLayerDelta,
+  CompareMetricDelta,
+  CompareSummaryDelta,
   DiveResponse,
   FileChangeType,
   FileNodeType,
   FileTreeNode,
+  HistorySummary,
   LayerFileTree,
   NormalizedFileTree,
+  DiveLayer,
 } from "./models";
 
 export function formatBytes(bytes: number, decimals = 2) {
@@ -32,7 +37,6 @@ export function calculatePercent(part: number, total: number) {
   }
   return part / total;
 }
-
 
 export function extractId(id: string) {
   return id.replace("sha256:", "").substring(0, 12);
@@ -287,4 +291,83 @@ export function normalizeDiveFileTrees(dive: DiveResponse): NormalizedFileTree {
   });
 
   return { aggregate, layers };
+}
+
+function toMetricDelta(left?: number, right?: number): CompareMetricDelta {
+  const safeLeft = Number.isFinite(left) ? (left as number) : 0;
+  const safeRight = Number.isFinite(right) ? (right as number) : 0;
+  return {
+    left: safeLeft,
+    right: safeRight,
+    delta: safeRight - safeLeft,
+  };
+}
+
+export function buildCompareSummaryDelta(
+  left?: HistorySummary,
+  right?: HistorySummary
+): CompareSummaryDelta {
+  return {
+    sizeBytes: toMetricDelta(left?.sizeBytes, right?.sizeBytes),
+    inefficientBytes: toMetricDelta(left?.inefficientBytes, right?.inefficientBytes),
+    efficiencyScore: toMetricDelta(left?.efficiencyScore, right?.efficiencyScore),
+  };
+}
+
+function getLayerMatchKey(layer: DiveLayer): string {
+  if (layer.digestId && layer.digestId.trim().length > 0) {
+    return layer.digestId;
+  }
+  if (layer.id && layer.id.trim().length > 0) {
+    return layer.id;
+  }
+  return String(layer.index ?? "unknown");
+}
+
+export function matchLayersForCompare(
+  leftLayers: DiveLayer[] = [],
+  rightLayers: DiveLayer[] = []
+): CompareLayerDelta[] {
+  const leftMap = new Map<string, DiveLayer>();
+  const rightMap = new Map<string, DiveLayer>();
+  const orderedKeys: string[] = [];
+
+  rightLayers.forEach((layer) => {
+    const key = getLayerMatchKey(layer);
+    rightMap.set(key, layer);
+    orderedKeys.push(key);
+  });
+
+  leftLayers.forEach((layer) => {
+    const key = getLayerMatchKey(layer);
+    leftMap.set(key, layer);
+    if (!rightMap.has(key)) {
+      orderedKeys.push(key);
+    }
+  });
+
+  return orderedKeys.map((key) => {
+    const left = leftMap.get(key);
+    const right = rightMap.get(key);
+    const leftSize = Number.isFinite(left?.sizeBytes) ? left?.sizeBytes ?? 0 : 0;
+    const rightSize = Number.isFinite(right?.sizeBytes) ? right?.sizeBytes ?? 0 : 0;
+    let status: CompareLayerDelta["status"] = "unchanged";
+    if (left && !right) {
+      status = "removed";
+    } else if (!left && right) {
+      status = "added";
+    } else if (
+      left?.sizeBytes !== right?.sizeBytes ||
+      left?.command !== right?.command
+    ) {
+      status = "modified";
+    }
+    return {
+      key,
+      status,
+      left,
+      right,
+      sizeBytesDelta: rightSize - leftSize,
+    };
+  });
 }

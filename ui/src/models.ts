@@ -130,6 +130,35 @@ export interface HistoryEntry {
   result: DiveResponse;
 }
 
+export type CompareSide = "left" | "right";
+
+export interface CompareSelectionState {
+  leftId?: string;
+  rightId?: string;
+}
+
+export interface CompareMetricDelta {
+  left: number;
+  right: number;
+  delta: number;
+}
+
+export interface CompareSummaryDelta {
+  sizeBytes: CompareMetricDelta;
+  inefficientBytes: CompareMetricDelta;
+  efficiencyScore: CompareMetricDelta;
+}
+
+export type CompareLayerStatus = "added" | "removed" | "modified" | "unchanged";
+
+export interface CompareLayerDelta {
+  key: string;
+  status: CompareLayerStatus;
+  left?: DiveLayer;
+  right?: DiveLayer;
+  sizeBytesDelta: number;
+}
+
 export type ExportFormat = "json" | "csv" | "html";
 
 export interface ExportRequest {
