@@ -155,8 +155,19 @@ func (s *Store) DeleteAll() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := os.RemoveAll(s.dir); err != nil && !os.IsNotExist(err) {
+	entries, err := os.ReadDir(s.dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
+	}
+
+	for _, entry := range entries {
+		path := filepath.Join(s.dir, entry.Name())
+		if err := os.RemoveAll(path); err != nil {
+			return err
+		}
 	}
 	return nil
 }

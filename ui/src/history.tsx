@@ -191,7 +191,7 @@ export default function HistoryList(props: {
                     onClick={() => onDelete(entry.id)}
                     disabled={disabled}
                   >
-                    Delete
+                    Delete analysis
                   </Button>
                   <Button
                     size="medium"

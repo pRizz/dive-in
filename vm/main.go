@@ -354,7 +354,11 @@ func jsonError(c echo.Context, status int, message string) error {
 func listHistory(c echo.Context) error {
 	entries, err := historyStore.List()
 	if err != nil {
-		return jsonError(c, http.StatusInternalServerError, "Failed to load history")
+		return jsonError(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to load history: %s", err),
+		)
 	}
 	return c.JSON(http.StatusOK, entries)
 }
@@ -366,14 +370,22 @@ func getHistoryEntry(c echo.Context) error {
 		if errors.Is(err, history.ErrNotFound) {
 			return jsonError(c, http.StatusNotFound, "History entry not found")
 		}
-		return jsonError(c, http.StatusInternalServerError, "Failed to load history entry")
+		return jsonError(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to load history entry: %s", err),
+		)
 	}
 	return c.JSON(http.StatusOK, entry)
 }
 
 func deleteHistoryAll(c echo.Context) error {
 	if err := historyStore.DeleteAll(); err != nil {
-		return jsonError(c, http.StatusInternalServerError, "Failed to delete history")
+		return jsonError(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to delete history: %s", err),
+		)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
@@ -384,10 +396,18 @@ func deleteHistoryEntry(c echo.Context) error {
 		if errors.Is(err, history.ErrNotFound) {
 			return jsonError(c, http.StatusNotFound, "History entry not found")
 		}
-		return jsonError(c, http.StatusInternalServerError, "Failed to load history entry")
+		return jsonError(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to load history entry: %s", err),
+		)
 	}
 	if err := historyStore.Delete(id); err != nil {
-		return jsonError(c, http.StatusInternalServerError, "Failed to delete history entry")
+		return jsonError(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to delete history entry: %s", err),
+		)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
