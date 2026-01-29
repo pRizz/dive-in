@@ -25,7 +25,16 @@ RUN npm run build
 FROM alpine
 ARG DIVE_VERSION=0.13.1
 RUN apk add --no-cache ca-certificates curl tar \
-    && curl -fsSL "https://github.com/wagoodman/dive/releases/download/v${DIVE_VERSION}/dive_${DIVE_VERSION}_linux_amd64.tar.gz" \
+    && ALPINE_ARCH="$(apk --print-arch)" \
+    && echo "Detected Alpine arch: ${ALPINE_ARCH}" \
+    && case "${ALPINE_ARCH}" in \
+      x86_64) DIVE_ARCH="amd64" ;; \
+      aarch64) DIVE_ARCH="arm64" ;; \
+      *) echo "Unsupported arch: ${ALPINE_ARCH}"; exit 1 ;; \
+    esac \
+    && echo "Using Dive arch: ${DIVE_ARCH}" \
+    && echo "Kernel: $(uname -a)" \
+    && curl -fsSL "https://github.com/wagoodman/dive/releases/download/v${DIVE_VERSION}/dive_${DIVE_VERSION}_linux_${DIVE_ARCH}.tar.gz" \
       | tar -xz -C /usr/local/bin dive \
     && chmod +x /usr/local/bin/dive
 LABEL org.opencontainers.image.title="Dive In" \
