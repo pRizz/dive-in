@@ -12,8 +12,8 @@ This roadmap modernizes the extension platform and then delivers reliable Dive a
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Platform + CI Baseline** - Modern toolchain, CI, and release foundations
-- [ ] **Phase 2: Reliable Analysis Runs** - Run analyses with status and actionable errors
+- [x] **Phase 1: Platform + CI Baseline** - Modern toolchain, CI, and release foundations
+- [x] **Phase 2: Reliable Analysis Runs** - Run analyses with status and actionable errors
 - [ ] **Phase 3: Core Insights UI** - Layer exploration, metrics, and native UI polish
 - [ ] **Phase 4: History + Export + CI Gates** - Persist results and enable sharing/thresholds
 - [ ] **Phase 5: Compare + Scout Handoff** - Advanced comparisons and integrations
@@ -34,10 +34,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Migrate UI toolchain to Vite
-- [ ] 01-02-PLAN.md — Add lint/test tooling + justfile + Dockerfile updates
-- [ ] 01-03-PLAN.md — Add Linux CI build/test/validate workflow
-- [ ] 01-04-PLAN.md — Add release automation with Changesets + semantic-release
+- [x] 01-01-PLAN.md — Migrate UI toolchain to Vite
+- [x] 01-02-PLAN.md — Add lint/test tooling + justfile + Dockerfile updates
+- [x] 01-03-PLAN.md — Add Linux CI build/test/validate workflow
+- [x] 01-04-PLAN.md — Add release automation with Changesets + semantic-release
 
 ### Phase 2: Reliable Analysis Runs
 **Goal**: Users can run Dive analyses and always know job status or failure details.
@@ -51,7 +51,7 @@ Plans:
 **Plans**: 1
 
 Plans:
-- [ ] 02-01-PLAN.md — Add async analysis jobs with status + source selection
+- [x] 02-01-PLAN.md — Add async analysis jobs with status + source selection
 
 ### Phase 3: Core Insights UI
 **Goal**: Users can explore layers and metrics in a Docker Desktop-native UI.
@@ -123,8 +123,8 @@ Phases execute in numeric order: 2 → 2.1 → 2.2 → 3 → 3.1 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Platform + CI Baseline | 0/TBD | Not started | - |
-| 2. Reliable Analysis Runs | 0/TBD | Not started | - |
+| 1. Platform + CI Baseline | 4/4 | Complete | 2026-01-29 |
+| 2. Reliable Analysis Runs | 1/1 | Complete | 2026-01-29 |
 | 3. Core Insights UI | 0/TBD | Not started | - |
 | 4. History + Export + CI Gates | 0/TBD | Not started | - |
 | 5. Compare + Scout Handoff | 0/TBD | Not started | - |

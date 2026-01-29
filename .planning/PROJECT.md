@@ -19,15 +19,15 @@ Users can run Dive analysis on their images from Docker Desktop and trust the re
 
 ### Active
 
-- [ ] Modernize UI stack to Vite and upgrade React/MUI dependencies
+- [x] Modernize UI stack to Vite and upgrade React/MUI dependencies
 - [ ] Upgrade Go runtime and backend dependencies to current stable versions
 - [ ] Update Dive integration to latest release and surface useful new flags/features
-- [ ] Harden backend (timeouts, input validation, safe file handling, non-fatal errors)
-- [ ] Add CI to build and verify Docker Desktop extension images on Linux
-- [ ] Add semantic-release + changesets for versioning and release automation
-- [ ] Replace Makefile with a justfile (dev/build/test/package/ci targets)
-- [ ] Update README to reflect new tooling, workflow, and requirements
-- [ ] Establish basic UI and Go test hooks in CI (even if minimal initially)
+- [x] Harden backend (timeouts, input validation, safe file handling, non-fatal errors)
+- [x] Add CI to build and verify Docker Desktop extension images on Linux
+- [x] Add semantic-release + changesets for versioning and release automation
+- [x] Replace Makefile with a justfile (dev/build/test/package/ci targets)
+- [x] Update README to reflect new tooling, workflow, and requirements
+- [x] Establish basic UI and Go test hooks in CI (even if minimal initially)
 
 ### Out of Scope
 
@@ -55,11 +55,11 @@ Users can run Dive analysis on their images from Docker Desktop and trust the re
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Migrate UI to Vite | Improve build speed and modern tooling | — Pending |
+| Migrate UI to Vite | Improve build speed and modern tooling | Completed |
 | Upgrade Go + dependencies | Security and maintainability | — Pending |
-| Use semantic-release + changesets | Consistent versioning and changelog automation | — Pending |
-| Replace Makefile with justfile | Simpler developer workflow | — Pending |
-| Keep backend in single file | Scope is small and refactor not required | — Pending |
+| Use semantic-release + changesets | Consistent versioning and changelog automation | Completed |
+| Replace Makefile with justfile | Simpler developer workflow | Completed |
+| Keep backend in single file | Scope is small and refactor not required | Confirmed |
 
 ---
-*Last updated: 2026-01-28 after initialization*
+*Last updated: 2026-01-29 after Phase 2 completion*
