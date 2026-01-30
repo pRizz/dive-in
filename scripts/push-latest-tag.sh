@@ -26,6 +26,7 @@ case "${confirmation}" in
 esac
 
 image="prizz/deep-dive:${latest_tag}"
+latest_image="prizz/deep-dive:latest"
 
 echo "Checking out ${latest_tag}..."
 git checkout "${latest_tag}"
@@ -33,10 +34,16 @@ git checkout "${latest_tag}"
 echo "Building ${image}..."
 docker build -t "${image}" .
 
+echo "Tagging ${image} as ${latest_image}..."
+docker tag "${image}" "${latest_image}"
+
 echo "Pushing ${image}..."
 docker push "${image}"
+
+echo "Pushing ${latest_image}..."
+docker push "${latest_image}"
 
 echo "Returning to main..."
 git checkout main
 
-echo "Done. Built and pushed ${image} successfully."
+echo "Done. Built and pushed ${image} and ${latest_image} successfully."
