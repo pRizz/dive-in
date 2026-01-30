@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
@@ -10,10 +10,12 @@ import {
 } from "@mui/material";
 import { AnalysisResult } from "./models";
 import {
+  buildDiveFileTreesFromFileList,
   buildWastedFileReferences,
   calculatePercent,
   formatBytes,
   formatPercent,
+  hasDiveFileList,
   normalizeDiveFileTrees,
 } from "./utils";
 import CircularProgressWithLabel from "./ring";
@@ -29,11 +31,43 @@ export default function Analysis(props: {
   historyId?: string;
 }) {
   const { image, dive } = props.analysis;
-  const fileTreeData = useMemo(() => normalizeDiveFileTrees(dive), [dive]);
+  const hasFileList = useMemo(() => hasDiveFileList(dive), [dive]);
+  const imageSizeBytes =
+    typeof image.sizeBytes === "number" ? image.sizeBytes : dive.image.sizeBytes;
+  const shouldDeferTree =
+    hasFileList && typeof imageSizeBytes === "number" && imageSizeBytes > 200 * 1024 * 1024;
+  const [isTreeDeferred, setIsTreeDeferred] = useState(shouldDeferTree);
+
+  useEffect(() => {
+    setIsTreeDeferred(shouldDeferTree);
+  }, [shouldDeferTree]);
+
+  const fileTreeData = useMemo(() => {
+    if (shouldDeferTree && isTreeDeferred) {
+      return { aggregate: [], layers: [] };
+    }
+    return hasFileList
+      ? buildDiveFileTreesFromFileList(dive)
+      : normalizeDiveFileTrees(dive);
+  }, [dive, hasFileList, isTreeDeferred, shouldDeferTree]);
   const wastedFileReferences = useMemo(
     () => buildWastedFileReferences(fileTreeData.aggregate),
     [fileTreeData.aggregate]
   );
+  const downloadDiveJson = () => {
+    const data = JSON.stringify(dive, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dive-${image.name.replace(/[^a-z0-9-_.]+/gi, "_")}.json`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+  const isFileTreeEmpty = fileTreeData.aggregate.length === 0;
+  const handleBuildTree = () => {
+    setIsTreeDeferred(false);
+  };
   const wastedPercent = calculatePercent(
     dive.image.inefficientBytes,
     dive.image.sizeBytes
@@ -144,15 +178,41 @@ export default function Analysis(props: {
             aggregateTree={fileTreeData.aggregate}
             layers={fileTreeData.layers}
           />
+          <Typography variant="caption" color="text.secondary">
+            Heads up: expanding very large folders (like node_modules) can make the
+            UI feel sluggish.
+          </Typography>
+          {shouldDeferTree && isTreeDeferred ? (
+            <Stack spacing={1}>
+              <Typography variant="body2" color="text.secondary">
+                This image is large. The file tree is built on demand to keep the UI
+                responsive.
+              </Typography>
+              <Button variant="outlined" onClick={handleBuildTree}>
+                Build file tree
+              </Button>
+            </Stack>
+          ) : null}
+          {isFileTreeEmpty && !isTreeDeferred ? (
+            <Stack spacing={1}>
+              <Typography variant="body2" color="text.secondary">
+                No aggregate file tree data detected. You can download the raw Dive
+                JSON to inspect the shape that was returned.
+              </Typography>
+              <Button variant="outlined" onClick={downloadDiveJson}>
+                Download Dive JSON
+              </Button>
+            </Stack>
+          ) : null}
         </Stack>
         <Stack spacing={2}>
           <Stack spacing={0.5}>
             <Typography variant="h3">Largest Files (sorted by size)</Typography>
             <Typography variant="body2" color="text.secondary">
-              Showing the top 120 files by size in the final image.
+              Showing the top 20 files by size in the final image.
             </Typography>
           </Stack>
-          <ImageTable rows={dive.image.fileReference}></ImageTable>
+          <ImageTable rows={dive.image.fileReference} limit={20}></ImageTable>
         </Stack>
         <Stack spacing={2}>
           <Stack spacing={0.5}>

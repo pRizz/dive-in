@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Chip,
   Collapse,
+  Checkbox,
   FormControl,
+  FormControlLabel,
   InputLabel,
   List,
   ListItem,
@@ -75,18 +77,48 @@ function getLayerLabel(layer: LayerFileTree, fallbackIndex: number) {
   const indexLabel =
     layer.layerIndex !== undefined ? layer.layerIndex : fallbackIndex;
   const commandLabel = layer.command ? layer.command.substring(0, 40) : "";
-  const suffix = commandLabel ? ` — ${commandLabel}` : "";
+  const sizeLabel =
+    typeof layer.sizeBytes === "number" ? formatBytes(layer.sizeBytes) : "";
+  const parts = [sizeLabel, commandLabel].filter(Boolean);
+  const suffix = parts.length > 0 ? ` — ${parts.join(" — ")}` : "";
   return `Layer ${indexLabel}${suffix}`;
 }
 
 export default function FileTree(props: FileTreeProps) {
   const [selectedLayer, setSelectedLayer] = useState<string>("aggregate");
+  const [hasSetInitialLayer, setHasSetInitialLayer] = useState(false);
   const [changeFilter, setChangeFilter] = useState<ChangeFilter>("all");
+  const [sortBySize, setSortBySize] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     () => new Set()
   );
 
   const layers = useMemo(() => props.layers ?? [], [props.layers]);
+  const largestLayerKey = useMemo(() => {
+    if (layers.length === 0) {
+      return undefined;
+    }
+    const largestLayer = layers.reduce((current, next) => {
+      const currentSize = current.sizeBytes ?? 0;
+      const nextSize = next.sizeBytes ?? 0;
+      if (nextSize > currentSize) {
+        return next;
+      }
+      return current;
+    }, layers[0]);
+    const index = largestLayer.layerIndex ?? layers.indexOf(largestLayer);
+    return String(index);
+  }, [layers]);
+
+  useEffect(() => {
+    if (hasSetInitialLayer || layers.length === 0) {
+      return;
+    }
+    if (largestLayerKey) {
+      setSelectedLayer(largestLayerKey);
+      setHasSetInitialLayer(true);
+    }
+  }, [hasSetInitialLayer, largestLayerKey, layers.length]);
   const activeTree = useMemo(() => {
     if (selectedLayer === "aggregate") {
       return props.aggregateTree ?? [];
@@ -102,6 +134,30 @@ export default function FileTree(props: FileTreeProps) {
     () => filterTreeByChange(activeTree, changeFilter),
     [activeTree, changeFilter]
   );
+
+  const sortedTree = useMemo(() => {
+    const sortNodes = (nodes: FileTreeNode[]): FileTreeNode[] => {
+      const sorted = [...nodes].sort((left, right) => {
+        const leftSize = left.sizeBytes ?? 0;
+        const rightSize = right.sizeBytes ?? 0;
+        if (rightSize !== leftSize) {
+          return rightSize - leftSize;
+        }
+        return left.name.localeCompare(right.name);
+      });
+      return sorted.map((node) => {
+        if (node.children && node.children.length > 0) {
+          return {
+            ...node,
+            children: sortNodes(node.children),
+          };
+        }
+        return node;
+      });
+    };
+
+    return sortBySize ? sortNodes(filteredTree) : filteredTree;
+  }, [filteredTree, sortBySize]);
 
   const toggleNode = (nodeKey: string) => {
     setExpandedNodes((previous) => {
@@ -263,6 +319,15 @@ export default function FileTree(props: FileTreeProps) {
               ))}
             </Select>
           </FormControl>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={sortBySize}
+                onChange={(event) => setSortBySize(event.target.checked)}
+              />
+            }
+            label="Sort by size"
+          />
           <ToggleButtonGroup
             value={changeFilter}
             exclusive
@@ -277,13 +342,16 @@ export default function FileTree(props: FileTreeProps) {
             <ToggleButton value="removed">Removed</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
-        {filteredTree.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          The largest layer is selected by default to highlight the biggest changes.
+        </Typography>
+        {sortedTree.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
             No file tree data available for the selected layer.
           </Typography>
         ) : (
           <List dense disablePadding>
-            {filteredTree.map((node, index) =>
+            {sortedTree.map((node, index) =>
               renderNode(node, 0, index, "root")
             )}
           </List>

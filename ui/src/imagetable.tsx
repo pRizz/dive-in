@@ -10,9 +10,11 @@ import { formatBytes } from './utils';
 
 interface TableProps {
   rows: FileReference[];
+  limit?: number;
 }
 
 export default function ImageTable(props: TableProps) {
+  const limit = props.limit ?? 120;
   return (
     <TableContainer component={Paper} variant="outlined">
       <Table sx={{ minWidth: 650 }} size="small">
@@ -28,7 +30,7 @@ export default function ImageTable(props: TableProps) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {props.rows.slice(0, 120).map((row, i) => (
+          {props.rows.slice(0, limit).map((row, i) => (
             <TableRow key={i} hover>
               <TableCell>{row.count}</TableCell>
               <TableCell align="right">

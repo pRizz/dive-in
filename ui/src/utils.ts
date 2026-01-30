@@ -276,9 +276,14 @@ function normalizeFileTreeNode(raw: unknown): FileTreeNode | null {
     readFirstValue(raw, ["change", "changeType", "status", "diffType", "diff"])
   );
 
+  const linkName = toStringValue(
+    readFirstValue(raw, ["linkName", "symlinkTarget", "linkTarget"])
+  );
   const isDir = toBoolean(readFirstValue(raw, ["isDir", "isDirectory", "dir"]));
   const isFile = toBoolean(readFirstValue(raw, ["isFile", "file"]));
-  const isLink = toBoolean(readFirstValue(raw, ["isLink", "symlink"]));
+  const isLink =
+    toBoolean(readFirstValue(raw, ["isLink", "symlink"])) ??
+    Boolean(linkName);
 
   const fileType = normalizeFileNodeType(
     readFirstValue(raw, ["fileType", "type", "kind", "nodeType"]),
@@ -293,6 +298,7 @@ function normalizeFileTreeNode(raw: unknown): FileTreeNode | null {
     "children",
     "entries",
     "files",
+    "fileList",
     "nodes",
     "tree",
     "fileTree",
@@ -325,7 +331,8 @@ export function normalizeFileTreeNodes(raw: unknown): FileTreeNode[] {
 }
 
 export function normalizeDiveFileTrees(dive: DiveResponse): NormalizedFileTree {
-  const aggregateCandidates = [
+  // Check top-level keys first
+  const topLevelCandidates = [
     dive.fileTree,
     dive.filetree,
     dive.tree,
@@ -333,8 +340,23 @@ export function normalizeDiveFileTrees(dive: DiveResponse): NormalizedFileTree {
     dive.files,
     dive.root,
   ];
+  
+  // Also check nested under image object (Dive may store aggregate tree here)
+  const imageRecord = dive.image as unknown as Record<string, unknown>;
+  const imageCandidates = imageRecord
+    ? [
+        imageRecord.fileTree,
+        imageRecord.filetree,
+        imageRecord.tree,
+        imageRecord.fileSystem,
+        imageRecord.files,
+        imageRecord.root,
+      ]
+    : [];
+  
+  const aggregateCandidates = [...topLevelCandidates, ...imageCandidates];
 
-  const aggregate = normalizeFileTreeNodes(
+  let aggregate = normalizeFileTreeNodes(
     aggregateCandidates.find((candidate) => Boolean(candidate))
   );
 
@@ -355,13 +377,140 @@ export function normalizeDiveFileTrees(dive: DiveResponse): NormalizedFileTree {
       layerId: layer.id,
       layerIndex: layer.index,
       command: layer.command,
+      sizeBytes: layer.sizeBytes,
       tree: normalizeFileTreeNodes(
         layerCandidates.find((candidate) => Boolean(candidate))
       ),
     };
   });
 
+  if (aggregate.length === 0) {
+    const fallbackLayer = layers.find((layer) => layer.tree.length > 0);
+    if (fallbackLayer) {
+      aggregate = fallbackLayer.tree;
+    }
+  }
+
   return { aggregate, layers };
+}
+
+type TreeBuilderNode = FileTreeNode & {
+  childrenMap?: Map<string, TreeBuilderNode>;
+};
+
+function ensureChild(
+  parent: TreeBuilderNode,
+  name: string,
+  path: string,
+  fileType: FileNodeType
+): TreeBuilderNode {
+  if (!parent.childrenMap) {
+    parent.childrenMap = new Map();
+  }
+  const existing = parent.childrenMap.get(name);
+  if (existing) {
+    return existing;
+  }
+  const node: TreeBuilderNode = {
+    name,
+    path,
+    fileType,
+    change: "unknown",
+  };
+  parent.childrenMap.set(name, node);
+  return node;
+}
+
+function finalizeTree(node: TreeBuilderNode): FileTreeNode {
+  const children = node.childrenMap
+    ? Array.from(node.childrenMap.values())
+        .map((child) => finalizeTree(child))
+        .sort((left, right) => left.name.localeCompare(right.name))
+    : undefined;
+  const { childrenMap, ...rest } = node;
+  if (children && children.length > 0) {
+    if (rest.fileType === "directory") {
+      const summedSize = children.reduce((total, child) => {
+        if (typeof child.sizeBytes === "number") {
+          return total + child.sizeBytes;
+        }
+        return total;
+      }, 0);
+      if (summedSize > 0) {
+        rest.sizeBytes = summedSize;
+      }
+    }
+    return { ...rest, children };
+  }
+  return rest;
+}
+
+function buildTreeFromFlatList(entries: FileTreeNode[]): FileTreeNode[] {
+  // Build a hierarchical tree from a flat file list:
+  // 1) Insert each path into a map-backed tree (no duplicates).
+  // 2) On finalize, walk back up to aggregate directory sizes from children.
+  // This keeps the whole transformation O(N) for N nodes.
+  const root: TreeBuilderNode = {
+    name: "root",
+    path: "",
+    fileType: "directory",
+    change: "unknown",
+    childrenMap: new Map(),
+  };
+
+  entries.forEach((entry) => {
+    const path = entry.path || entry.name;
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length === 0) {
+      return;
+    }
+    let current = root;
+    for (let i = 0; i < parts.length; i += 1) {
+      const part = parts[i];
+      const isLeaf = i === parts.length - 1;
+      const nextPath = parts.slice(0, i + 1).join("/");
+      const nodeType: FileNodeType = isLeaf
+        ? entry.fileType ?? "unknown"
+        : "directory";
+      const child = ensureChild(current, part, nextPath, nodeType);
+      if (isLeaf) {
+        child.sizeBytes = entry.sizeBytes;
+        child.change = entry.change ?? "unknown";
+      }
+      current = child;
+    }
+  });
+
+  return finalizeTree(root).children ?? [];
+}
+
+export function hasDiveFileList(dive: DiveResponse): boolean {
+  return (dive.layer ?? []).some((layer) => {
+    const record = layer as unknown as Record<string, unknown>;
+    return Array.isArray(record.fileList);
+  });
+}
+
+export function buildDiveFileTreesFromFileList(
+  dive: DiveResponse
+): NormalizedFileTree {
+  const layers = (dive.layer ?? []).map((layer) => {
+    const record = layer as unknown as Record<string, unknown>;
+    const flatNodes = normalizeFileTreeNodes(record.fileList);
+    return {
+      layerId: layer.id,
+      layerIndex: layer.index,
+      command: layer.command,
+      sizeBytes: layer.sizeBytes,
+      tree: buildTreeFromFlatList(flatNodes),
+    };
+  });
+
+  const lastLayerWithTree = [...layers].reverse().find((layer) => layer.tree.length > 0);
+  return {
+    aggregate: lastLayerWithTree?.tree ?? [],
+    layers,
+  };
 }
 
 export function buildWastedFileReferences(

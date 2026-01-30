@@ -44,6 +44,7 @@ export interface LayerFileTree {
   layerId?: string;
   layerIndex?: number;
   command?: string;
+  sizeBytes?: number;
   tree: FileTreeNode[];
 }
 
