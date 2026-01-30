@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -248,7 +249,7 @@ func runAnalyzeJob(jobID string, req AnalyzeRequest, target string) {
 		job.Message = ""
 	})
 
-	result, err := runDive(req.Source, target)
+	result, err := runDive(jobID, req.Source, target)
 	if err != nil {
 		jobStore.Update(jobID, func(job *Job) {
 			job.Status = StatusFailed
@@ -287,7 +288,7 @@ func runAnalyzeJob(jobID string, req AnalyzeRequest, target string) {
 	}
 }
 
-func runDive(source string, target string) (json.RawMessage, error) {
+func runDive(jobID string, source string, target string) (json.RawMessage, error) {
 	if _, err := exec.LookPath("dive"); err != nil {
 		return nil, fmt.Errorf("Dive binary not found in PATH")
 	}
@@ -307,18 +308,94 @@ func runDive(source string, target string) (json.RawMessage, error) {
 
 	args := []string{"--source", source, target, "--json", tempPath}
 	cmd := exec.CommandContext(ctx, "dive", args...)
-	output, err := cmd.CombinedOutput()
-	if ctx.Err() == context.DeadlineExceeded {
-		return nil, fmt.Errorf("Dive timed out after %s", analysisTimeout)
-	}
+
+	// Capture stderr and stdout separately
+	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		message := strings.TrimSpace(string(output))
+		return nil, fmt.Errorf("Failed to create stderr pipe: %w", err)
+	}
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create stdout pipe: %w", err)
+	}
+
+	// Start command
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("Failed to start Dive: %w", err)
+	}
+
+	// Read progress output in goroutines
+	var wg sync.WaitGroup
+	var progressErr error
+	var stderrOutput strings.Builder
+	var stdoutOutput strings.Builder
+
+	// Read stderr (progress messages)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			stderrOutput.WriteString(line)
+			stderrOutput.WriteString("\n")
+			// Parse progress indicators and update job message
+			progressMsg := parseProgressMessage(line)
+			if progressMsg != "" {
+				jobStore.Update(jobID, func(job *Job) {
+					job.Message = progressMsg
+				})
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			progressErr = err
+		}
+	}()
+
+	// Read stdout (may contain progress or final output)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			stdoutOutput.WriteString(line)
+			stdoutOutput.WriteString("\n")
+			// Parse progress indicators from stdout as well
+			progressMsg := parseProgressMessage(line)
+			if progressMsg != "" {
+				jobStore.Update(jobID, func(job *Job) {
+					job.Message = progressMsg
+				})
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			progressErr = err
+		}
+	}()
+
+	// Wait for output reading to complete
+	wg.Wait()
+
+	// Wait for command to complete
+	if err := cmd.Wait(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return nil, fmt.Errorf("Dive timed out after %s", analysisTimeout)
+		}
+		// Combine stderr and stdout for error message
+		combinedOutput := strings.TrimSpace(stderrOutput.String() + stdoutOutput.String())
+		message := combinedOutput
 		if message == "" {
 			message = err.Error()
 		}
 		return nil, fmt.Errorf("Dive failed: %s", message)
 	}
 
+	if progressErr != nil {
+		return nil, fmt.Errorf("Failed to read Dive output: %w", progressErr)
+	}
+
+	// Read final JSON result from temp file
 	byteValue, err := os.ReadFile(tempPath)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read analysis output: %w", err)
@@ -328,6 +405,38 @@ func runDive(source string, target string) (json.RawMessage, error) {
 	}
 
 	return json.RawMessage(byteValue), nil
+}
+
+// parseProgressMessage extracts progress stage messages from Dive CLI output
+func parseProgressMessage(line string) string {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return ""
+	}
+
+	lower := strings.ToLower(line)
+
+	// Common Dive progress patterns
+	if strings.Contains(lower, "fetching") || strings.Contains(lower, "pulling") {
+		return "Pulling image..."
+	}
+	if strings.Contains(lower, "analyzing") || strings.Contains(lower, "analyze") {
+		return "Analyzing layers..."
+	}
+	if strings.Contains(lower, "calculating") || strings.Contains(lower, "calculate") {
+		return "Calculating metrics..."
+	}
+	if strings.Contains(lower, "building") || strings.Contains(lower, "build") {
+		return "Building file tree..."
+	}
+	if strings.Contains(lower, "scanning") || strings.Contains(lower, "scan") {
+		return "Scanning files..."
+	}
+	if strings.Contains(lower, "processing") || strings.Contains(lower, "process") {
+		return "Processing layers..."
+	}
+
+	return ""
 }
 
 func resolveAnalyzeTarget(req AnalyzeRequest) (string, error) {
