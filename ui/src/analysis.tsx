@@ -180,7 +180,7 @@ export default function Analysis(props: {
           />
           <Typography variant="caption" color="text.secondary">
             Heads up: expanding very large folders (like node_modules) can make the
-            UI feel sluggish.
+            UI laggy.
           </Typography>
           {shouldDeferTree && isTreeDeferred ? (
             <Stack spacing={1}>

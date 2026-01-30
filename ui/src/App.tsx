@@ -979,8 +979,11 @@ export function App() {
           Deep Dive
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Use this Docker extension to helps you explore a docker image, layer
-          contents, and discover ways to shrink the size of your Docker/OCI image.
+          Helps you explore Docker images, their layers, contents, and discover ways to shrink their size. Built on top of the excellent{" "}
+          <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noopener noreferrer">
+            Dive CLI tool
+          </Link>
+          .
         </Typography>
       </Stack>
       <Divider sx={{ mt: 4, mb: 4 }} orientation="horizontal" flexItem />
