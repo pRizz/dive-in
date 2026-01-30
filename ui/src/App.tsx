@@ -62,6 +62,23 @@ interface DockerImage {
   Size?: number;
 }
 
+const formatElapsed = (elapsedSeconds?: number) => {
+  if (elapsedSeconds === undefined) {
+    return undefined;
+  }
+  const totalSeconds = Math.max(0, Math.floor(elapsedSeconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+};
+
 const imageChipSx = {
   height: "auto",
   "& .MuiChip-label": {
@@ -79,6 +96,7 @@ interface ImageCardProps {
   jobTarget?: string;
   jobStatus?: JobStatus;
   jobMessage?: string;
+  jobElapsedSeconds?: number;
   openHistoryEntry: (id: string) => void;
   startAnalysis: (
     target: string,
@@ -98,6 +116,10 @@ function ImageCard(props: ImageCardProps) {
     typeof props.image.sizeBytes === "number"
       ? formatBytes(props.image.sizeBytes)
       : undefined;
+  const elapsedLabel = formatElapsed(props.jobElapsedSeconds);
+  const statusLabel = elapsedLabel
+    ? `Status: ${props.jobStatus} (${elapsedLabel})`
+    : `Status: ${props.jobStatus}`;
 
   return (
     <>
@@ -175,12 +197,17 @@ function ImageCard(props: ImageCardProps) {
         {props.jobTarget === props.image.name && props.jobStatus ? (
           <CardContent sx={{ pt: 0 }}>
             {props.jobMessage ? (
-              <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>
-                {props.jobMessage}
-              </Typography>
+              <>
+                <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>
+                  {props.jobMessage}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {statusLabel}
+                </Typography>
+              </>
             ) : (
               <Typography variant="caption" color="text.secondary">
-                Status: {props.jobStatus}
+                {statusLabel}
               </Typography>
             )}
             {props.isJobActive ? <LinearProgress sx={{ mt: 1 }} /> : null}
@@ -198,6 +225,7 @@ interface ImageListProps {
   jobTarget?: string;
   jobStatus?: JobStatus;
   jobMessage?: string;
+  jobElapsedSeconds?: number;
   openHistoryEntry: (id: string) => void;
   startAnalysis: (
     target: string,
@@ -339,6 +367,7 @@ function ImageList(props: ImageListProps) {
                   jobTarget={props.jobTarget}
                   jobStatus={props.jobStatus}
                   jobMessage={props.jobMessage}
+                  jobElapsedSeconds={props.jobElapsedSeconds}
                   openHistoryEntry={props.openHistoryEntry}
                   startAnalysis={props.startAnalysis}
                 />
@@ -368,6 +397,9 @@ export function App() {
   const [jobStatus, setJobStatus] = useState<JobStatus | undefined>(undefined);
   const [jobMessage, setJobMessage] = useState<string | undefined>(undefined);
   const [jobTarget, setJobTarget] = useState<string | undefined>(undefined);
+  const [jobElapsedSeconds, setJobElapsedSeconds] = useState<number | undefined>(
+    undefined
+  );
   const [historyEntries, setHistoryEntries] = useState<HistoryMetadata[]>([]);
   const [historyError, setHistoryError] = useState<string | undefined>(
     undefined
@@ -591,6 +623,7 @@ export function App() {
     setJobStatus(undefined);
     setJobMessage(undefined);
     setJobTarget(undefined);
+    setJobElapsedSeconds(undefined);
   };
 
   const downloadFile = (data: BlobPart, filename: string, contentType: string) => {
@@ -702,6 +735,7 @@ export function App() {
     setSelectedHistoryId(undefined);
     setJobTarget(target);
     setJobStatus("queued");
+    setJobElapsedSeconds(0);
 
     try {
       const data = (await ddClient.extension.vm.service.post(
@@ -750,12 +784,23 @@ export function App() {
       {jobTarget === archivePath.trim() && jobStatus ? (
         <Stack spacing={1}>
           {jobMessage ? (
-            <Typography variant="body2" color="text.primary">
-              {jobMessage}
-            </Typography>
+            <>
+              <Typography variant="body2" color="text.primary">
+                {jobMessage}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Status: {jobStatus}
+                {jobElapsedSeconds !== undefined
+                  ? ` (${formatElapsed(jobElapsedSeconds) ?? "0s"})`
+                  : ""}
+              </Typography>
+            </>
           ) : (
             <Typography variant="caption" color="text.secondary">
               Status: {jobStatus}
+              {jobElapsedSeconds !== undefined
+                ? ` (${formatElapsed(jobElapsedSeconds) ?? "0s"})`
+                : ""}
             </Typography>
           )}
           {isJobActive ? <LinearProgress /> : null}
@@ -804,6 +849,7 @@ export function App() {
       }
       setJobStatus(status.status);
       setJobMessage(status.message);
+      setJobElapsedSeconds(status.elapsedSeconds);
 
       if (status.status === "succeeded") {
         await fetchAnalysisResult(jobId);
@@ -883,41 +929,33 @@ export function App() {
     setSelectedHistoryId(undefined);
   };
 
-  const handleCancel = () => {
-    resetJobState();
-    setAnalysisResult(undefined);
-    setSelectedHistoryId(undefined);
-  };
-
-  const statusAlert = jobStatus ? (
-    <Alert
-      severity={jobStatus === "failed" ? "error" : "info"}
-      action={
-        jobStatus === "failed" ? (
+  const statusAlert =
+    jobStatus === "failed" ? (
+      <Alert
+        severity="error"
+        action={
           <Button color="inherit" size="small" onClick={handleRetry}>
             Retry
           </Button>
-        ) : isJobActive ? (
-          <Button color="inherit" size="small" onClick={handleCancel}>
-            Stop waiting
-          </Button>
-        ) : null
-      }
-    >
-      <Stack spacing={0.5}>
-        <Typography variant="body2">
-          Status: {jobStatus}
-          {jobTarget ? ` — ${jobTarget}` : ""}
-        </Typography>
-        {jobMessage ? (
-          <Typography variant="body2">{jobMessage}</Typography>
-        ) : null}
-        {errorHint ? (
-          <Typography variant="body2">{errorHint}</Typography>
-        ) : null}
-      </Stack>
-    </Alert>
-  ) : null;
+        }
+      >
+        <Stack spacing={0.5}>
+          <Typography variant="body2">
+            Status: {jobStatus}
+            {jobElapsedSeconds !== undefined
+              ? ` (${formatElapsed(jobElapsedSeconds) ?? "0s"})`
+              : ""}
+            {jobTarget ? ` — ${jobTarget}` : ""}
+          </Typography>
+          {jobMessage ? (
+            <Typography variant="body2">{jobMessage}</Typography>
+          ) : null}
+          {errorHint ? (
+            <Typography variant="body2">{errorHint}</Typography>
+          ) : null}
+        </Stack>
+      </Alert>
+    ) : null;
 
   return (
     <>
@@ -1047,13 +1085,24 @@ export function App() {
           </Tabs>
           <Box role="tabpanel" hidden={activeTab !== "analysis"} sx={{ mt: 3 }}>
             {analysis ? (
-              <Analysis
-                onExit={clearAnalysis}
-                analysis={analysis}
-                onOpenExport={() => setExportDialogOpen(true)}
-                onOpenCIGate={() => setCIGateDialogOpen(true)}
-                historyId={selectedHistoryId}
-              ></Analysis>
+              <Stack spacing={2}>
+                {jobStatus && jobTarget && !isJobActive ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Status: {jobStatus}
+                    {jobElapsedSeconds !== undefined
+                      ? ` (${formatElapsed(jobElapsedSeconds) ?? "0s"})`
+                      : ""}
+                    {jobTarget ? ` — ${jobTarget}` : ""}
+                  </Typography>
+                ) : null}
+                <Analysis
+                  onExit={clearAnalysis}
+                  analysis={analysis}
+                  onOpenExport={() => setExportDialogOpen(true)}
+                  onOpenCIGate={() => setCIGateDialogOpen(true)}
+                  historyId={selectedHistoryId}
+                ></Analysis>
+              </Stack>
             ) : compareIds ? (
               <CompareView
                 leftId={compareIds.leftId}
@@ -1095,6 +1144,7 @@ export function App() {
                     jobTarget={jobTarget}
                     jobStatus={jobStatus}
                     jobMessage={jobMessage}
+                    jobElapsedSeconds={jobElapsedSeconds}
                     openHistoryEntry={openHistoryEntry}
                     startAnalysis={startAnalysis}
                     getImages={getImages}

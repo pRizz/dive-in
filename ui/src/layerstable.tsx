@@ -35,8 +35,8 @@ function compareSortValues(a: number | string, b: number | string) {
 }
 
 export default function LayersTable(props: TableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("index");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<SortKey>("sizeBytes");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const sortedRows = useMemo(() => {
     const direction = sortDirection === "asc" ? 1 : -1;
     const copy = [...props.rows];

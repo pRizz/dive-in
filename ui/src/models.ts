@@ -107,6 +107,7 @@ export interface AnalysisStatusResponse {
   jobId: string;
   status: JobStatus;
   message?: string;
+  elapsedSeconds: number;
 }
 
 export interface AnalysisErrorResponse {

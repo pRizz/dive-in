@@ -9,7 +9,7 @@ import { FileReference } from './models';
 import { formatBytes } from './utils';
 
 interface TableProps {
-    rows: FileReference[];
+  rows: FileReference[];
 }
 
 export default function ImageTable(props: TableProps) {
@@ -28,7 +28,7 @@ export default function ImageTable(props: TableProps) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {props.rows.map((row, i) => (
+          {props.rows.slice(0, 120).map((row, i) => (
             <TableRow key={i} hover>
               <TableCell>{row.count}</TableCell>
               <TableCell align="right">

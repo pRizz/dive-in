@@ -101,9 +101,10 @@ type AnalyzeResponse struct {
 }
 
 type AnalysisStatusResponse struct {
-	JobID   string    `json:"jobId"`
-	Status  JobStatus `json:"status"`
-	Message string    `json:"message,omitempty"`
+	JobID          string    `json:"jobId"`
+	Status         JobStatus `json:"status"`
+	Message        string    `json:"message,omitempty"`
+	ElapsedSeconds int64     `json:"elapsedSeconds"`
 }
 
 type AnalysisErrorResponse struct {
@@ -211,10 +212,22 @@ func getAnalysisStatus(c echo.Context) error {
 	if !ok {
 		return jsonError(c, http.StatusNotFound, "Analysis job not found")
 	}
+	elapsedSeconds := int64(0)
+	if !job.CreatedAt.IsZero() {
+		endTime := time.Now()
+		if !job.CompletedAt.IsZero() {
+			endTime = job.CompletedAt
+		}
+		elapsedSeconds = int64(endTime.Sub(job.CreatedAt).Seconds())
+		if elapsedSeconds < 0 {
+			elapsedSeconds = 0
+		}
+	}
 	return c.JSON(http.StatusOK, AnalysisStatusResponse{
-		JobID:   job.ID,
-		Status:  job.Status,
-		Message: job.Message,
+		JobID:          job.ID,
+		Status:         job.Status,
+		Message:        job.Message,
+		ElapsedSeconds: elapsedSeconds,
 	})
 }
 

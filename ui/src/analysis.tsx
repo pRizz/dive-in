@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { AnalysisResult } from "./models";
 import {
+  buildWastedFileReferences,
   calculatePercent,
   formatBytes,
   formatPercent,
@@ -29,6 +30,10 @@ export default function Analysis(props: {
 }) {
   const { image, dive } = props.analysis;
   const fileTreeData = useMemo(() => normalizeDiveFileTrees(dive), [dive]);
+  const wastedFileReferences = useMemo(
+    () => buildWastedFileReferences(fileTreeData.aggregate),
+    [fileTreeData.aggregate]
+  );
   const wastedPercent = calculatePercent(
     dive.image.inefficientBytes,
     dive.image.sizeBytes
@@ -141,11 +146,37 @@ export default function Analysis(props: {
           />
         </Stack>
         <Stack spacing={2}>
-          <Typography variant="h3">Largest Files (sorted by size)</Typography>
+          <Stack spacing={0.5}>
+            <Typography variant="h3">Largest Files (sorted by size)</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Showing the top 120 files by size in the final image.
+            </Typography>
+          </Stack>
           <ImageTable rows={dive.image.fileReference}></ImageTable>
         </Stack>
         <Stack spacing={2}>
-          <Typography variant="h3">Layers</Typography>
+          <Stack spacing={0.5}>
+            <Typography variant="h3">Largest Wasted Files</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Removed or overwritten files that contribute to wasted space.
+            </Typography>
+          </Stack>
+          {wastedFileReferences.length > 0 ? (
+            <ImageTable rows={wastedFileReferences}></ImageTable>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No removed or overwritten files detected in the Dive file tree.
+            </Typography>
+          )}
+        </Stack>
+        <Stack spacing={2}>
+          <Stack spacing={0.5}>
+            <Typography variant="h3">Layers</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Each layer shows its size contribution and the build command that
+              created it. Click column headers to sort by index or size.
+            </Typography>
+          </Stack>
           <LayersTable rows={dive.layer}></LayersTable>
         </Stack>
       </Stack>

@@ -6,6 +6,7 @@ import {
   FileChangeType,
   FileNodeType,
   FileTreeNode,
+  FileReference,
   HistorySummary,
   NormalizedFileTree,
   DiveLayer,
@@ -361,6 +362,38 @@ export function normalizeDiveFileTrees(dive: DiveResponse): NormalizedFileTree {
   });
 
   return { aggregate, layers };
+}
+
+export function buildWastedFileReferences(
+  nodes: FileTreeNode[]
+): FileReference[] {
+  const entries = new Map<string, { count: number; sizeBytes: number }>();
+  const visit = (node: FileTreeNode) => {
+    const isDirectory = node.fileType === "directory";
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(visit);
+    }
+    if (isDirectory) {
+      return;
+    }
+    if (node.change !== "removed" && node.change !== "modified") {
+      return;
+    }
+    if (!node.path || typeof node.sizeBytes !== "number") {
+      return;
+    }
+    const existing = entries.get(node.path);
+    if (existing) {
+      existing.count += 1;
+      existing.sizeBytes += node.sizeBytes;
+    } else {
+      entries.set(node.path, { count: 1, sizeBytes: node.sizeBytes });
+    }
+  };
+  nodes.forEach(visit);
+  return Array.from(entries.entries())
+    .map(([file, data]) => ({ file, count: data.count, sizeBytes: data.sizeBytes }))
+    .sort((left, right) => right.sizeBytes - left.sizeBytes);
 }
 
 function toMetricDelta(left?: number, right?: number): CompareMetricDelta {
