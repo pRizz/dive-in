@@ -1121,6 +1121,17 @@ export function App() {
           </Link>
           .
         </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Built on top of the excellent{" "}
+          <Link
+            href="https://github.com/wagoodman/dive"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Dive CLI
+          </Link>
+          .
+        </Typography>
         <Typography variant="caption" color="text.secondary">
           Made by{" "}
           <Typography component="span" color="text.primary">
