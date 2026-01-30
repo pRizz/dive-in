@@ -35,23 +35,44 @@ Publishing guide: see `PUBLISHING.md`.
 
 Go through [the official docs](https://docs.docker.com/desktop/extensions-sdk/quickstart/) to understand the basic setting up of the Docker extension.
 
-### Local development
+### Prerequisites
 
-Prereqs: Docker Desktop (extensions enabled), Node.js 20+, Go (per `vm/go.mod`).
+- **Docker Desktop 4.10.0+** (extensions must be enabled)
+- **Node.js 20+** (matches package.json engines)
+- **Go 1.19+** (matches vm/go.mod)
+- **Note:** Dive CLI is bundled in the extension VM and not required locally
+
+### Fast dev loop (primary workflow)
+
+For rapid UI iteration with hot-reload:
+
+1. Start the UI dev server: `just ui-dev` (runs Vite on http://localhost:5173)
+2. In another terminal, connect Docker Desktop to the dev server:
+   ```bash
+   docker extension dev ui-source deep-dive:dev http://localhost:5173
+   ```
+3. Optional: Enable debug mode:
+   ```bash
+   docker extension dev debug deep-dive:dev
+   ```
+
+This workflow allows hot-reload of UI changes without rebuilding the extension image.
+
+### Initial setup
 
 1. Install UI dependencies: `npm --prefix ui install`
-2. Build the UI: `npm --prefix ui run build`
-3. Build the extension image: `docker build -t deep-dive:dev .`
-4. Load the local extension into Docker Desktop: `docker extension install deep-dive:dev`
+2. Build and install the local extension: `just install-development-extension`
+   - This builds the image as `deep-dive:dev` and installs it in Docker Desktop
 
-To update a local install, rebuild and re-run the install command.
+### Updating local extension
 
-Useful commands for setting up debugging
+After making code changes, rebuild and update:
 
-```
-$ npm --prefix ui run dev
-$ docker extension dev debug deep-dive:dev
-$ docker extension dev ui-source deep-dive:dev http://localhost:5173
-```
+- **Recommended:** `just reinstall-development-extension`
+- **Manual:** `just docker-build` then `docker extension update deep-dive:dev --force`
 
-Make sure you run `npm run dev` in the `ui/` folder.
+### Troubleshooting
+
+- **Extension appears stale:** Run `just reinstall-development-extension` to clear caches
+- **Docker-archive analyses:** Use full absolute paths (Docker Desktop requirement)
+- **UI changes don't appear:** Ensure the dev server is running (`just ui-dev`) and `docker extension dev ui-source` is active
