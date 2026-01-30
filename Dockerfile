@@ -39,7 +39,7 @@ RUN apk add --no-cache ca-certificates curl tar \
     && chmod +x /usr/local/bin/dive
 LABEL org.opencontainers.image.title="Deep Dive" \
     org.opencontainers.image.description="Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image." \
-    org.opencontainers.image.vendor="Prakhar Srivastav" \
+    org.opencontainers.image.vendor="Peter Ryszkiewicz" \
     com.docker.desktop.extension.api.version=">=0.4.2" \
     com.docker.extension.screenshots='[{"alt":"Main page", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/1.png?raw=true"}, {"alt":"Analysis results", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/2.png?raw=true"}, {"alt":"History", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/3.png?raw=true"}]' \
     com.docker.extension.detailed-description="<p><h1>Deep Dive</h1>Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image.</p>" \
