@@ -78,6 +78,7 @@ interface ImageCardProps {
   isJobActive: boolean;
   jobTarget?: string;
   jobStatus?: JobStatus;
+  jobMessage?: string;
   openHistoryEntry: (id: string) => void;
   startAnalysis: (
     target: string,
@@ -173,9 +174,15 @@ function ImageCard(props: ImageCardProps) {
         </Stack>
         {props.jobTarget === props.image.name && props.jobStatus ? (
           <CardContent sx={{ pt: 0 }}>
-            <Typography variant="caption" color="text.secondary">
-              Status: {props.jobStatus}
-            </Typography>
+            {props.jobMessage ? (
+              <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>
+                {props.jobMessage}
+              </Typography>
+            ) : (
+              <Typography variant="caption" color="text.secondary">
+                Status: {props.jobStatus}
+              </Typography>
+            )}
             {props.isJobActive ? <LinearProgress sx={{ mt: 1 }} /> : null}
           </CardContent>
         ) : null}
@@ -190,6 +197,7 @@ interface ImageListProps {
   isJobActive: boolean;
   jobTarget?: string;
   jobStatus?: JobStatus;
+  jobMessage?: string;
   openHistoryEntry: (id: string) => void;
   startAnalysis: (
     target: string,
@@ -330,6 +338,7 @@ function ImageList(props: ImageListProps) {
                   isJobActive={props.isJobActive}
                   jobTarget={props.jobTarget}
                   jobStatus={props.jobStatus}
+                  jobMessage={props.jobMessage}
                   openHistoryEntry={props.openHistoryEntry}
                   startAnalysis={props.startAnalysis}
                 />
@@ -740,9 +749,15 @@ export function App() {
       </Box>
       {jobTarget === archivePath.trim() && jobStatus ? (
         <Stack spacing={1}>
-          <Typography variant="caption" color="text.secondary">
-            Status: {jobStatus}
-          </Typography>
+          {jobMessage ? (
+            <Typography variant="body2" color="text.primary">
+              {jobMessage}
+            </Typography>
+          ) : (
+            <Typography variant="caption" color="text.secondary">
+              Status: {jobStatus}
+            </Typography>
+          )}
           {isJobActive ? <LinearProgress /> : null}
         </Stack>
       ) : null}
@@ -1079,6 +1094,7 @@ export function App() {
                     isJobActive={isJobActive}
                     jobTarget={jobTarget}
                     jobStatus={jobStatus}
+                    jobMessage={jobMessage}
                     openHistoryEntry={openHistoryEntry}
                     startAnalysis={startAnalysis}
                     getImages={getImages}
