@@ -1,5 +1,5 @@
 {
-  "name": "dive-in-root",
+  "name": "deep-dive-root",
   "private": true,
   "workspaces": [
     "ui"

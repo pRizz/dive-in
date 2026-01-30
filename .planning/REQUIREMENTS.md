@@ -1,4 +1,4 @@
-# Requirements: Dive In
+# Requirements: Deep Dive
 
 **Defined:** 2026-01-28  
 **Core Value:** Users can run Dive analysis on their images from Docker Desktop and trust the results they see.

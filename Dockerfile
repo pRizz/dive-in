@@ -37,16 +37,16 @@ RUN apk add --no-cache ca-certificates curl tar \
     && curl -fsSL "https://github.com/wagoodman/dive/releases/download/v${DIVE_VERSION}/dive_${DIVE_VERSION}_linux_${DIVE_ARCH}.tar.gz" \
       | tar -xz -C /usr/local/bin dive \
     && chmod +x /usr/local/bin/dive
-LABEL org.opencontainers.image.title="Dive In" \
+LABEL org.opencontainers.image.title="Deep Dive" \
     org.opencontainers.image.description="Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image." \
     org.opencontainers.image.vendor="Prakhar Srivastav" \
     com.docker.desktop.extension.api.version=">=0.4.2" \
-    com.docker.extension.screenshots='[{"alt":"main page", "url":"https://github.com/prakhar1989/dive-in/blob/main/screenshots/1.png?raw=true"}, {"alt":"start containers", "url":"https://github.com/prakhar1989/dive-in/blob/main/screenshots/2.png?raw=true"}]' \
-    com.docker.extension.detailed-description="<p><h1>Dive In</h1>Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image.</p>" \
-    com.docker.desktop.extension.icon="https://raw.githubusercontent.com/prakhar1989/dive-in/main/scuba.svg" \
-    com.docker.extension.publisher-url="https://prakhar.me" \
+    com.docker.extension.screenshots='[{"alt":"Main page", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/1.png?raw=true"}, {"alt":"Analysis results", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/2.png?raw=true"}, {"alt":"History", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/3.png?raw=true"}]' \
+    com.docker.extension.detailed-description="<p><h1>Deep Dive</h1>Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image.</p>" \
+    com.docker.desktop.extension.icon="https://raw.githubusercontent.com/pRizz/deep-dive/main/scuba.svg" \
+    com.docker.extension.publisher-url="https://github.com/pRizz" \
     com.docker.extension.categories="utility-tools" \
-    com.docker.extension.additional-urls='[{"title":"Documentation","url":"https://github.com/prakhar1989/dive-in"}]' \
+    com.docker.extension.additional-urls='[{"title":"Documentation","url":"https://github.com/pRizz/deep-dive"}]' \
     com.docker.extension.changelog="First version"
 
 COPY --from=builder /backend/bin/service /
@@ -55,4 +55,4 @@ COPY metadata.json .
 COPY docker.svg .
 COPY scuba.svg .
 COPY --from=client-builder /ui/dist ui
-CMD /service -socket /run/guest-services/extension-dive-in.sock
+CMD /service -socket /run/guest-services/extension-deep-dive.sock

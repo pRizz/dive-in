@@ -1,9 +1,9 @@
 services:
-  dive-in:
+  deep-dive:
     image: ${DESKTOP_PLUGIN_IMAGE}
     volumes:
-      - dive-in-history:/data/history
+      - deep-dive-history:/data/history
       - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
-  dive-in-history:
+  deep-dive-history:

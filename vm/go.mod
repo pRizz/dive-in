@@ -1,4 +1,4 @@
-module dive-in
+module deep-dive
 
 go 1.19
 

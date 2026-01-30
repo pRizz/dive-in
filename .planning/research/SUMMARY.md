@@ -1,13 +1,13 @@
 # Project Research Summary
 
-**Project:** Dive In
+**Project:** Deep Dive
 **Domain:** Docker Desktop extension for local image analysis (Dive)
 **Researched:** 2026-01-28
 **Confidence:** MEDIUM
 
 ## Executive Summary
 
-Dive In is a Docker Desktop extension that runs Dive against local images and presents layer and efficiency insights in a native Desktop UI. The dominant pattern is a stateless React UI that delegates all long-running analysis and state to a VM backend accessed via the Extensions SDK socket APIs. Experts build these extensions by packaging UI assets + a backend container inside a single extension image, with explicit metadata labels and a pinned Dive CLI to stabilize behavior across Docker versions.
+Deep Dive is a Docker Desktop extension that runs Dive against local images and presents layer and efficiency insights in a native Desktop UI. The dominant pattern is a stateless React UI that delegates all long-running analysis and state to a VM backend accessed via the Extensions SDK socket APIs. Experts build these extensions by packaging UI assets + a backend container inside a single extension image, with explicit metadata labels and a pinned Dive CLI to stabilize behavior across Docker versions.
 
 The recommended approach is to formalize backend APIs first, integrate Dive behind a stable JSON parser, and build UI views on top of those APIs while persisting job state in the backend. This preserves UX across tab switches, keeps analysis reliable, and isolates CLI version drift. The largest risks are UI lifecycle resets, incorrect Docker socket wiring, and platform/CI assumptions. Mitigate them by keeping analysis in the backend, using `/var/run/docker.sock.raw`, and planning explicit CI coverage for Desktop-specific scenarios.
 

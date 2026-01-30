@@ -882,7 +882,7 @@ export function App() {
         spacing={2}
         flexWrap="wrap"
       >
-        <Typography variant="h1">Dive-In</Typography>
+        <Typography variant="h1">Deep Dive</Typography>
         <Typography variant="body1" color="text.secondary">
           Use this Docker extension to helps you explore a docker image, layer
           contents, and discover ways to shrink the size of your Docker/OCI image.

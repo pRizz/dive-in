@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-const imageName = process.argv[2] ?? "dive-in:ci";
+const imageName = process.argv[2] ?? "deep-dive:ci";
 const metadataPath = process.argv[3] ?? "metadata.json";
 
 const requiredLabels = [

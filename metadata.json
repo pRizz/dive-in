@@ -3,16 +3,16 @@
   "vm": {
     "composefile": "docker-compose.yaml",
     "exposes": {
-      "socket": "extension-dive-in.sock"
+      "socket": "extension-deep-dive.sock"
     }
   },
   "ui": {
     "dashboard-tab": {
-      "title": "Dive In",
+      "title": "Deep Dive",
       "src": "index.html",
       "root": "ui",
       "backend": {
-        "socket": "extension-dive-in.sock"
+        "socket": "extension-deep-dive.sock"
       }
     }
   }

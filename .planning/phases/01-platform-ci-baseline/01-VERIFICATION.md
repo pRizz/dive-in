@@ -60,7 +60,7 @@ human_verification:
 | `ui/package.json` | `vite` | npm scripts (dev/build/test) | ✓ WIRED | `dev`, `build`, `preview` map to Vite. |
 | `Dockerfile` | `ui/dist` | COPY from client-builder | ✓ WIRED | `COPY --from=client-builder /ui/dist ui`. |
 | `.github/workflows/ci.yml` | `vm/go.mod` | setup-go and go test/vet | ✓ WIRED | `go-version-file: vm/go.mod` then `go test`/`go vet`. |
-| `.github/workflows/ci.yml` | docker extension validate | extension validation step | ✓ WIRED | `docker extension validate dive-in:ci`. |
+| `.github/workflows/ci.yml` | docker extension validate | extension validation step | ✓ WIRED | `docker extension validate deep-dive:ci`. |
 | `.github/workflows/release.yml` | `.changeset/config.json` | changesets/action version PR | ✓ WIRED | Uses `changesets/action@v1` with `npm run release`. |
 | `.releaserc.cjs` | `ui/package.json` | custom version reader script | ✓ WIRED | `scripts/semantic-release-version.cjs` reads `ui/package.json`. |
 

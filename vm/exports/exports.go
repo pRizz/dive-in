@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"dive-in/history"
+	"deep-dive/history"
 )
 
 type Format string

@@ -5,7 +5,7 @@
 ## Directory Layout
 
 ```
-dive-in/
+deep-dive/
 ├── ui/                 # React UI for Docker Desktop extension
 ├── vm/                 # Go VM service for extension backend
 ├── screenshots/        # Marketing screenshots referenced in README/Dockerfile

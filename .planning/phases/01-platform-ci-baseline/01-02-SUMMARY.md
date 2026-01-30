@@ -87,7 +87,7 @@ Each task was committed atomically:
 - **Issue:** `npm ci` failed in Docker because Vite's peer dependency on yaml was unsatisfied.
 - **Fix:** Added `yaml` to dev dependencies and updated lockfile.
 - **Files modified:** ui/package.json, ui/package-lock.json
-- **Verification:** `docker build -t dive-in:dev .`
+- **Verification:** `docker build -t deep-dive:dev .`
 - **Committed in:** 09f65fc (task commit)
 
 ---

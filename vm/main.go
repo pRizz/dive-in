@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"dive-in/ci"
-	"dive-in/exports"
-	"dive-in/history"
+	"deep-dive/ci"
+	"deep-dive/exports"
+	"deep-dive/history"
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
 )

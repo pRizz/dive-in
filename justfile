@@ -1,5 +1,5 @@
-image := "dive-in:dev"
-extension_image := "prakhar1989/dive-in"
+image := "deep-dive:dev"
+extension_image := "prizz/deep-dive"
 tag := "dev"
 
 ui-dev:
@@ -31,6 +31,9 @@ install-extension:
 
 update-extension:
   docker extension update {{extension_image}}:{{tag}} --force
+
+install-development-extension:
+  docker build -t {{image}} . ; docker extension install {{image}} --force
 
 reinstall-development-extension:
   docker build -t {{image}} . ; docker extension update {{image}} --force
