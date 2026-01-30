@@ -14,6 +14,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve-version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,8 +30,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Create release PR or publish
+        id: changesets
         uses: changesets/action@v1
         with:
           publish: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve published version
+        id: resolve-version
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          set -euo pipefail
+          tag_pattern="^[0-9]+\.[0-9]+\.[0-9]+$"
+          latest_tag="$(
+            git tag --list |
+              grep -E "${tag_pattern}" |
+              sort -V |
+              tail -n 1
+          )"
+          if [[ -z "${latest_tag}" ]]; then
+            echo "No version tags found matching ${tag_pattern}."
+            exit 1
+          fi
+          version="${latest_tag}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+  push-image:
+    needs: release
+    if: needs.release.outputs.version != ''
+    uses: ./.github/workflows/push-latest-tag.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.release.outputs.version }}
