@@ -94,12 +94,12 @@ Plans:
 
 ### Phase 6: on long running tasks, ensure they are asynchronous so the UI is not blocked and try to show a better progress indicator if we can show status of progress, for example when clicking "Analyze" on a docker image.
 
-**Goal:** [To be planned]
+**Goal:** Users see detailed progress messages during long-running analysis tasks instead of generic "running" status.
 **Depends on:** Phase 5
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 6 to break down)
+- [ ] 06-01-PLAN.md — Capture Dive CLI progress output and enhance UI progress indicators
 
 **Details:**
 [To be added during planning]
@@ -128,5 +128,5 @@ Phases execute in numeric order: 2 → 2.1 → 2.2 → 3 → 3.1 → 4
 | 3. Core Insights UI | 1/1 | Complete | 2026-01-29 |
 | 4. History + Export + CI Gates | 1/1 | Complete | 2026-01-29 |
 | 5. Compare + Scout Handoff | 0/TBD | Not started | - |
-| 6. on long running tasks, ensure they are asynchronous so the UI is not blocked and try to show a better progress indicator if we can show status of progress, for example when clicking "Analyze" on a docker image. | 0/TBD | Not started | - |
+| 6. on long running tasks, ensure they are asynchronous so the UI is not blocked and try to show a better progress indicator if we can show status of progress, for example when clicking "Analyze" on a docker image. | 0/1 | Not started | - |
 | 7. add simple instructions to the readme for allowing for local development of this and instructions for loading the local extension in Docker Desktop | 0/TBD | Not started | - |
