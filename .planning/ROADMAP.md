@@ -106,15 +106,19 @@ Plans:
 
 ### Phase 7: add simple instructions to the readme for allowing for local development of this and instructions for loading the local extension in Docker Desktop
 
-**Goal:** [To be planned]
+**Goal:** Developers can follow clear README instructions to set up local development and load the extension in Docker Desktop using just commands.
 **Depends on:** Phase 6
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+- [ ] 07-01-PLAN.md — Update README.md with improved local development instructions using just commands
 
 **Details:**
-[To be added during planning]
+Documentation-only phase that improves README.md with:
+- Prerequisite version requirements (Docker Desktop 4.10.0+, Node.js 20+, Go 1.19+)
+- Fast dev loop workflow (just ui-dev + docker extension dev ui-source)
+- Installation and update commands using just
+- Troubleshooting guidance
 
 ## Progress
 
