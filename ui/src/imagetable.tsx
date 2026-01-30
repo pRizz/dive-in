@@ -7,7 +7,6 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import { FileReference } from './models';
 import { formatBytes } from './utils';
-import { Typography } from '@mui/material';
 
 interface TableProps {
     rows: FileReference[];

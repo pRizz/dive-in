@@ -55,4 +55,4 @@ COPY metadata.json .
 COPY docker.svg .
 COPY ui/public/scuba.svg scuba.svg
 COPY --from=client-builder /ui/dist ui
-CMD /service -socket /run/guest-services/extension-deep-dive.sock
+CMD ["/service", "-socket", "/run/guest-services/extension-deep-dive.sock"]

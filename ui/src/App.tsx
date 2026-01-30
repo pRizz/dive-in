@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createDockerDesktopClient } from "@docker/extension-api-client";
 import {
   Typography,
@@ -62,6 +62,286 @@ interface DockerImage {
   Size?: number;
 }
 
+const imageChipSx = {
+  height: "auto",
+  "& .MuiChip-label": {
+    fontSize: "0.8rem",
+    lineHeight: 1.1,
+    paddingInline: 2,
+    paddingBlock: 1,
+  },
+};
+
+interface ImageCardProps {
+  image: Image;
+  historyEntry?: HistoryMetadata;
+  isJobActive: boolean;
+  jobTarget?: string;
+  jobStatus?: JobStatus;
+  openHistoryEntry: (id: string) => void;
+  startAnalysis: (
+    target: string,
+    selectedSource: AnalysisSource,
+    maybeImageId?: string
+  ) => void;
+}
+
+function ImageCard(props: ImageCardProps) {
+  const createdLabel = props.image.createdAt
+    ? new Date(props.image.createdAt).toLocaleString()
+    : undefined;
+  const createdRelative = props.image.createdAt
+    ? formatRelativeTimeFromNow(props.image.createdAt)
+    : undefined;
+  const sizeLabel =
+    typeof props.image.sizeBytes === "number"
+      ? formatBytes(props.image.sizeBytes)
+      : undefined;
+
+  return (
+    <>
+      <Card
+        sx={{ minWidth: 200, height: "100%", display: "flex", flexDirection: "column" }}
+        variant="outlined"
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{ flex: 1 }}
+        >
+          <CardContent sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              variant="subtitle1"
+              component="div"
+              sx={{ fontWeight: 500, overflowWrap: "anywhere" }}
+              gutterBottom
+            >
+              {props.image.name}
+            </Typography>
+            <Typography sx={{ fontSize: 14 }} color="text.secondary">
+              {props.image.id}
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+              {createdLabel ? (
+                <Chip label={`Built: ${createdLabel}`} size="small" sx={imageChipSx} />
+              ) : null}
+              {createdRelative ? (
+                <Chip label={`Age: ${createdRelative}`} size="small" sx={imageChipSx} />
+              ) : null}
+              {sizeLabel ? (
+                <Chip label={`Size: ${sizeLabel}`} size="small" sx={imageChipSx} />
+              ) : null}
+            </Stack>
+          </CardContent>
+          <CardActions sx={{ justifyContent: "flex-end", pr: 2, flexShrink: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {props.historyEntry ? (
+                <Button
+                  variant="outlined"
+                  disabled={props.isJobActive}
+                  onClick={() => props.openHistoryEntry(props.historyEntry?.id ?? "")}
+                >
+                  View analysis
+                </Button>
+              ) : null}
+              <Box sx={{ position: "relative" }}>
+                <Button
+                  variant="outlined"
+                  disabled={props.isJobActive}
+                  onClick={() => {
+                    props.startAnalysis(props.image.name, "docker", props.image.fullId);
+                  }}
+                >
+                  {props.historyEntry ? "Re-analyze" : "Analyze"}
+                  {props.isJobActive && props.jobTarget === props.image.name && (
+                    <CircularProgress
+                      size={24}
+                      sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        marginTop: "-12px",
+                        marginLeft: "-12px",
+                      }}
+                    />
+                  )}
+                </Button>
+              </Box>
+            </Stack>
+          </CardActions>
+        </Stack>
+        {props.jobTarget === props.image.name && props.jobStatus ? (
+          <CardContent sx={{ pt: 0 }}>
+            <Typography variant="caption" color="text.secondary">
+              Status: {props.jobStatus}
+            </Typography>
+            {props.isJobActive ? <LinearProgress sx={{ mt: 1 }} /> : null}
+          </CardContent>
+        ) : null}
+      </Card>
+    </>
+  );
+}
+
+interface ImageListProps {
+  images: Image[];
+  historyEntries: HistoryMetadata[];
+  isJobActive: boolean;
+  jobTarget?: string;
+  jobStatus?: JobStatus;
+  openHistoryEntry: (id: string) => void;
+  startAnalysis: (
+    target: string,
+    selectedSource: AnalysisSource,
+    maybeImageId?: string
+  ) => void;
+  getImages: () => void;
+}
+
+function ImageList(props: ImageListProps) {
+  const [filter, setFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "created" | "size">("created");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const historyByImageRef = useMemo(() => {
+    const map = new Map<string, HistoryMetadata>();
+    props.historyEntries.forEach((entry) => {
+      if (entry.source !== "docker") {
+        return;
+      }
+      const key = entry.imageId || entry.image;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, entry);
+        return;
+      }
+      const existingTime = Date.parse(existing.completedAt);
+      const nextTime = Date.parse(entry.completedAt);
+      if (Number.isFinite(nextTime) && nextTime > existingTime) {
+        map.set(key, entry);
+      }
+    });
+    return map;
+  }, [props.historyEntries]);
+  const filteredImages = useMemo(() => {
+    const trimmed = filter.trim().toLowerCase();
+    if (!trimmed) {
+      return props.images;
+    }
+    return props.images.filter((image) =>
+      image.name.toLowerCase().includes(trimmed)
+    );
+  }, [filter, props.images]);
+  const sortedImages = useMemo(() => {
+    const copy = [...filteredImages];
+    const direction = sortDirection === "asc" ? 1 : -1;
+    copy.sort((left, right) => {
+      if (sortBy === "name") {
+        return left.name.localeCompare(right.name) * direction;
+      }
+      if (sortBy === "created") {
+        const leftValue = left.createdAt ?? 0;
+        const rightValue = right.createdAt ?? 0;
+        return (leftValue - rightValue) * direction;
+      }
+      const leftValue = left.sizeBytes ?? 0;
+      const rightValue = right.sizeBytes ?? 0;
+      return (leftValue - rightValue) * direction;
+    });
+    return copy;
+  }, [filteredImages, sortBy, sortDirection]);
+
+  return (
+    <>
+      <Typography variant="h3" sx={{ mb: 2 }}>
+        Choose an image below to get started
+      </Typography>
+      <Stack
+        direction="row"
+        spacing={2}
+        flexWrap="wrap"
+        alignItems="center"
+        sx={{ mb: 2 }}
+      >
+        <TextField
+          label="Filter by image name"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+          size="small"
+          sx={{ minWidth: 240 }}
+          disabled={props.isJobActive}
+        />
+        <TextField
+          select
+          label="Sort by"
+          value={sortBy}
+          onChange={(event) =>
+            setSortBy(event.target.value as "name" | "created" | "size")
+          }
+          size="small"
+          sx={{ minWidth: 160 }}
+          disabled={props.isJobActive}
+        >
+          <MenuItem value="name">Name</MenuItem>
+          <MenuItem value="created">Build time</MenuItem>
+          <MenuItem value="size">Size</MenuItem>
+        </TextField>
+        <TextField
+          select
+          label="Direction"
+          value={sortDirection}
+          onChange={(event) =>
+            setSortDirection(event.target.value as "asc" | "desc")
+          }
+          size="small"
+          sx={{ minWidth: 140 }}
+          disabled={props.isJobActive}
+        >
+          <MenuItem value="asc">Ascending</MenuItem>
+          <MenuItem value="desc">Descending</MenuItem>
+        </TextField>
+        <Button
+          variant="outlined"
+          onClick={props.getImages}
+          disabled={props.isJobActive}
+        >
+          Refresh list
+        </Button>
+      </Stack>
+      {props.images.length === 0 ? (
+        <Alert severity="info">
+          No images found. Build or pull an image with Docker, then refresh the list.
+        </Alert>
+      ) : sortedImages.length === 0 ? (
+        <Alert severity="info">
+          No images match the current filter. Clear the filter to see all images.
+        </Alert>
+      ) : (
+        <Grid container spacing={2} alignItems="stretch">
+          {sortedImages.map((image) => {
+            const historyEntry = image.fullId
+              ? historyByImageRef.get(image.fullId)
+              : undefined;
+            return (
+              <Grid item xs={12} md={6} key={`${image.id}-${image.name}`}>
+                <ImageCard
+                  image={image}
+                  historyEntry={historyEntry}
+                  isJobActive={props.isJobActive}
+                  jobTarget={props.jobTarget}
+                  jobStatus={props.jobStatus}
+                  openHistoryEntry={props.openHistoryEntry}
+                  startAnalysis={props.startAnalysis}
+                />
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
+    </>
+  );
+}
+
 export function App() {
   const [analysis, setAnalysisResult] = useState<AnalysisResult | undefined>(
     undefined
@@ -104,7 +384,7 @@ export function App() {
     }
   }, []);
 
-  const checkDiveInstallation = async () => {
+  const checkDiveInstallation = useCallback(async () => {
     if (!ddClient?.extension?.vm?.service) {
       return;
     }
@@ -119,18 +399,18 @@ export function App() {
     } finally {
       setCheckingDive(false);
     }
-  };
+  }, [ddClient]);
 
   const isDiveMissing = clientError?.includes("Dive is not found");
 
-  const readImages = async () => {
+  const readImages = useCallback(async () => {
     if (!ddClient) {
       return [];
     }
     return (await ddClient.docker.listImages()) as DockerImage[];
-  };
+  }, [ddClient]);
 
-  const getImages = async () => {
+  const getImages = useCallback(async () => {
     if (!ddClient) {
       return;
     }
@@ -182,9 +462,9 @@ export function App() {
       return result;
     });
     setImages(images);
-  };
+  }, [ddClient, readImages]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     if (!ddClient?.extension?.vm?.service) {
       return;
     }
@@ -200,7 +480,7 @@ export function App() {
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, [ddClient]);
 
   const clearHistorySelections = (ids: string[]) => {
     if (ids.length === 0) {
@@ -364,7 +644,7 @@ export function App() {
     downloadFile(content, filename, "application/x-yaml");
   };
 
-  const fetchAnalysisResult = async (currentJobId: string) => {
+  const fetchAnalysisResult = useCallback(async (currentJobId: string) => {
     if (!ddClient?.extension?.vm?.service) {
       return;
     }
@@ -381,14 +661,14 @@ export function App() {
       });
       setSelectedHistoryId(currentJobId);
       setActiveTab("analysis");
-      fetchHistory();
+      await fetchHistory();
     } catch (error) {
       setJobStatus("failed");
       setJobMessage(getErrorMessage(error));
     }
-  };
+  }, [ddClient, fetchHistory, jobTarget]);
 
-  const startAnalysis = async (
+  const startAnalysis = useCallback(async (
     target: string,
     selectedSource: AnalysisSource,
     maybeImageId?: string
@@ -425,257 +705,7 @@ export function App() {
       setJobStatus("failed");
       setJobMessage(getErrorMessage(error));
     }
-  };
-
-  const imageChipSx = {
-    height: "auto",
-    "& .MuiChip-label": {
-      fontSize: "0.8rem",
-      lineHeight: 1.1,
-      paddingInline: 2,
-      paddingBlock: 1,
-    },
-  };
-
-  function ImageCard(props: { image: Image; historyEntry?: HistoryMetadata }) {
-    const createdLabel = props.image.createdAt
-      ? new Date(props.image.createdAt).toLocaleString()
-      : undefined;
-    const createdRelative = props.image.createdAt
-      ? formatRelativeTimeFromNow(props.image.createdAt)
-      : undefined;
-    const sizeLabel =
-      typeof props.image.sizeBytes === "number"
-        ? formatBytes(props.image.sizeBytes)
-        : undefined;
-
-    return (
-      <>
-        <Card
-          sx={{ minWidth: 200, height: "100%", display: "flex", flexDirection: "column" }}
-          variant="outlined"
-        >
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ flex: 1 }}
-          >
-            <CardContent sx={{ flex: 1, minWidth: 0 }}>
-              <Typography
-                variant="subtitle1"
-                component="div"
-                sx={{ fontWeight: 500, overflowWrap: "anywhere" }}
-                gutterBottom
-              >
-                {props.image.name}
-              </Typography>
-              <Typography sx={{ fontSize: 14 }} color="text.secondary">
-                {props.image.id}
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
-                {createdLabel ? (
-                  <Chip label={`Built: ${createdLabel}`} size="small" sx={imageChipSx} />
-                ) : null}
-                {createdRelative ? (
-                  <Chip label={`Age: ${createdRelative}`} size="small" sx={imageChipSx} />
-                ) : null}
-                {sizeLabel ? (
-                  <Chip label={`Size: ${sizeLabel}`} size="small" sx={imageChipSx} />
-                ) : null}
-              </Stack>
-            </CardContent>
-            <CardActions
-              sx={{ justifyContent: "flex-end", pr: 2, flexShrink: 0 }}
-            >
-              <Stack direction="row" spacing={1} alignItems="center">
-                {props.historyEntry ? (
-                  <Button
-                    variant="outlined"
-                    disabled={isJobActive}
-                    onClick={() => openHistoryEntry(props.historyEntry?.id ?? "")}
-                  >
-                    View analysis
-                  </Button>
-                ) : null}
-                <Box sx={{ position: "relative" }}>
-                  <Button
-                    variant="outlined"
-                    disabled={isJobActive}
-                  onClick={() => {
-                    startAnalysis(props.image.name, "docker", props.image.fullId);
-                  }}
-                  >
-                    {props.historyEntry ? "Re-analyze" : "Analyze"}
-                    {isJobActive && jobTarget === props.image.name && (
-                      <CircularProgress
-                        size={24}
-                        sx={{
-                          position: "absolute",
-                          top: "50%",
-                          left: "50%",
-                          marginTop: "-12px",
-                          marginLeft: "-12px",
-                        }}
-                      />
-                    )}
-                  </Button>
-                </Box>
-              </Stack>
-            </CardActions>
-          </Stack>
-          {jobTarget === props.image.name && jobStatus ? (
-            <CardContent sx={{ pt: 0 }}>
-              <Typography variant="caption" color="text.secondary">
-                Status: {jobStatus}
-              </Typography>
-              {isJobActive ? <LinearProgress sx={{ mt: 1 }} /> : null}
-            </CardContent>
-          ) : null}
-        </Card>
-      </>
-    );
-  }
-
-  const ImageList = () => {
-    const [filter, setFilter] = useState("");
-    const [sortBy, setSortBy] = useState<"name" | "created" | "size">("created");
-    const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-    const historyByImageRef = useMemo(() => {
-      const map = new Map<string, HistoryMetadata>();
-      historyEntries.forEach((entry) => {
-        if (entry.source !== "docker") {
-          return;
-        }
-        const key = entry.imageId || entry.image;
-        const existing = map.get(key);
-        if (!existing) {
-          map.set(key, entry);
-          return;
-        }
-        const existingTime = Date.parse(existing.completedAt);
-        const nextTime = Date.parse(entry.completedAt);
-        if (Number.isFinite(nextTime) && nextTime > existingTime) {
-          map.set(key, entry);
-        }
-      });
-      return map;
-    }, [historyEntries]);
-    const filteredImages = useMemo(() => {
-      const trimmed = filter.trim().toLowerCase();
-      if (!trimmed) {
-        return images;
-      }
-      return images.filter((image) =>
-        image.name.toLowerCase().includes(trimmed)
-      );
-    }, [filter, images]);
-    const sortedImages = useMemo(() => {
-      const copy = [...filteredImages];
-      const direction = sortDirection === "asc" ? 1 : -1;
-      copy.sort((left, right) => {
-        if (sortBy === "name") {
-          return left.name.localeCompare(right.name) * direction;
-        }
-        if (sortBy === "created") {
-          const leftValue = left.createdAt ?? 0;
-          const rightValue = right.createdAt ?? 0;
-          return (leftValue - rightValue) * direction;
-        }
-        const leftValue = left.sizeBytes ?? 0;
-        const rightValue = right.sizeBytes ?? 0;
-        return (leftValue - rightValue) * direction;
-      });
-      return copy;
-    }, [filteredImages, sortBy, sortDirection]);
-
-    return (
-      <>
-        <Typography variant="h3" sx={{ mb: 2 }}>
-          Choose an image below to get started
-        </Typography>
-        <Stack
-          direction="row"
-          spacing={2}
-          flexWrap="wrap"
-          alignItems="center"
-          sx={{ mb: 2 }}
-        >
-          <TextField
-            label="Filter by image name"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            size="small"
-            sx={{ minWidth: 240 }}
-            disabled={isJobActive}
-          />
-          <TextField
-            select
-            label="Sort by"
-            value={sortBy}
-            onChange={(event) =>
-              setSortBy(event.target.value as "name" | "created" | "size")
-            }
-            size="small"
-            sx={{ minWidth: 160 }}
-            disabled={isJobActive}
-          >
-            <MenuItem value="name">Name</MenuItem>
-            <MenuItem value="created">Build time</MenuItem>
-            <MenuItem value="size">Size</MenuItem>
-          </TextField>
-          <TextField
-            select
-            label="Direction"
-            value={sortDirection}
-            onChange={(event) =>
-              setSortDirection(event.target.value as "asc" | "desc")
-            }
-            size="small"
-            sx={{ minWidth: 140 }}
-            disabled={isJobActive}
-          >
-            <MenuItem value="asc">Ascending</MenuItem>
-            <MenuItem value="desc">Descending</MenuItem>
-          </TextField>
-          <Button
-            variant="outlined"
-            onClick={getImages}
-            disabled={isJobActive}
-          >
-            Refresh list
-          </Button>
-        </Stack>
-        {images.length === 0 ? (
-          <Alert severity="info">
-            No images found. Build or pull an image with Docker, then refresh the
-            list.
-          </Alert>
-        ) : sortedImages.length === 0 ? (
-          <Alert severity="info">
-            No images match the current filter. Clear the filter to see all
-            images.
-          </Alert>
-        ) : (
-          <Grid container spacing={2} alignItems="stretch">
-          {sortedImages.map((image) => {
-            const historyEntry = image.fullId
-              ? historyByImageRef.get(image.fullId)
-              : undefined;
-            return (
-              <Grid item xs={12} md={6} key={`${image.id}-${image.name}`}>
-                <ImageCard
-                  image={image}
-                  historyEntry={historyEntry}
-                ></ImageCard>
-              </Grid>
-            );
-          })}
-          </Grid>
-        )}
-      </>
-    );
-  };
+  }, [ddClient]);
 
   const ArchiveAnalyzer = () => (
     <Stack spacing={2}>
@@ -730,7 +760,7 @@ export function App() {
     checkDiveInstallation();
     getImages();
     fetchHistory();
-  }, [ddClient]);
+  }, [checkDiveInstallation, ddClient, fetchHistory, getImages]);
 
   useEffect(() => {
     if (!ddClient?.extension?.vm?.service || !jobId) {
@@ -772,7 +802,7 @@ export function App() {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [ddClient, jobId, jobStatus]);
+  }, [ddClient, fetchAnalysisResult, jobId, jobStatus]);
 
   const clearAnalysis = () => {
     setAnalysisResult(undefined);
@@ -1042,7 +1072,20 @@ export function App() {
                     />
                   </RadioGroup>
                 </FormControl>
-                {source === "docker" ? <ImageList></ImageList> : <ArchiveAnalyzer />}
+                {source === "docker" ? (
+                  <ImageList
+                    images={images}
+                    historyEntries={historyEntries}
+                    isJobActive={isJobActive}
+                    jobTarget={jobTarget}
+                    jobStatus={jobStatus}
+                    openHistoryEntry={openHistoryEntry}
+                    startAnalysis={startAnalysis}
+                    getImages={getImages}
+                  />
+                ) : (
+                  <ArchiveAnalyzer />
+                )}
               </Stack>
             )}
           </Box>

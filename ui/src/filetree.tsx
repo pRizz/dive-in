@@ -86,7 +86,7 @@ export default function FileTree(props: FileTreeProps) {
     () => new Set()
   );
 
-  const layers = props.layers ?? [];
+  const layers = useMemo(() => props.layers ?? [], [props.layers]);
   const activeTree = useMemo(() => {
     if (selectedLayer === "aggregate") {
       return props.aggregateTree ?? [];

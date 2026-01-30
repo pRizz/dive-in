@@ -7,7 +7,6 @@ import {
   FileNodeType,
   FileTreeNode,
   HistorySummary,
-  LayerFileTree,
   NormalizedFileTree,
   DiveLayer,
 } from "./models";
