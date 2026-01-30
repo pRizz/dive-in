@@ -4,12 +4,25 @@ A Docker extension that helps you explore a docker image, layer contents, and di
 
 Built on the top of excellent CLI tool - https://github.com/wagoodman/dive
 
-![i1](screenshots/1.png)
-![i2](screenshots/2.png)
+Based on the original extension by Prakhar Srivastav:
+https://github.com/prakhar1989/dive-in
+
+## Highlights
+
+- Analysis and History are split into dedicated tabs.
+- Image list includes filtering, sorting, refresh, and metadata chips.
+- History supports compare, export, and delete actions.
+- CI gate rules can be generated for `.dive-ci`.
+
+![List of images](screenshots/1.png)
+![Analysis results](screenshots/2.png)
+![History](screenshots/3.png)
 
 ## Installation
 
-Make sure your Docker desktop supports extensions. This extension can be installed from [Docker Hub] (https://hub.docker.com/extensions/prakhar1989/dive-in) or in Docker Desktop. 
+Make sure your Docker desktop supports extensions. This extension can be installed
+from [Docker Hub](https://hub.docker.com/extensions/prakhar1989/dive-in) or in
+Docker Desktop.
 
 ## Development
 
