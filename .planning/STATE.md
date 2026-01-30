@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-01-28)
 
 **Core value:** Users can run Dive analysis on their images from Docker Desktop and trust the results they see.
-**Current focus:** Phase 6 - Long running task progress UX
+**Current focus:** Phase 7 - Local development instructions
 
 ## Current Position
 
-Phase: 6 of 7 (Long running task progress UX)
+Phase: 7 of 7 (Local development instructions)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Next Phase: Phase 7 - Local development instructions
-Last activity: 2026-01-30 — Completed 06-01-PLAN.md
+Next Phase: All phases complete
+Last activity: 2026-01-30 — Completed 07-01-PLAN.md
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: -
 - Total execution time: -
 
@@ -34,6 +34,7 @@ Progress: [██████████] 100%
 | 4. History + Export + CI Gates | 1 | 1 | 11m |
 | 5. Compare + Scout Handoff | 1 | 1 | 5m |
 | 6. Long running task progress UX | 1 | 1 | 8m |
+| 7. Local development instructions | 1 | 1 | <1m |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -54,6 +55,8 @@ Recent decisions affecting current work:
 - Compare runs in the UI by fetching two history entries and matching layers by digest/id.
 - Parse progress messages from both stderr and stdout streams for comprehensive coverage of Dive output.
 - Use string matching for common progress patterns to handle Dive output format variations.
+- Use just commands as primary workflow path for local development.
+- Document fast dev loop (UI dev server + Docker Desktop extension dev mode) as primary workflow.
 
 ### Pending Todos
 
@@ -70,6 +73,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-30 03:16 UTC
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-01-30 03:48 UTC
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
