@@ -2,6 +2,10 @@ image := "deep-dive:dev"
 extension_image := "prizz/deep-dive"
 tag := "dev"
 
+build: ui-build docker-build
+
+test: ui-test vm-test
+
 ui-dev:
   npm --prefix ui run dev
 
