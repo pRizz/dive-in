@@ -19,6 +19,7 @@ import {
   LinearProgress,
   Link,
   MenuItem,
+  Switch,
   Radio,
   RadioGroup,
   Tab,
@@ -168,12 +169,13 @@ function ImageCard(props: ImageCardProps) {
             </Stack>
           </CardContent>
           <CardActions sx={{ justifyContent: "flex-end", pr: 2, flexShrink: 0 }}>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="column" spacing={1} alignItems="stretch">
               {props.historyEntry ? (
                 <Button
                   variant="outlined"
                   disabled={props.isJobActive}
                   onClick={() => props.openHistoryEntry(props.historyEntry?.id ?? "")}
+                  fullWidth
                 >
                   View analysis
                 </Button>
@@ -185,6 +187,7 @@ function ImageCard(props: ImageCardProps) {
                   onClick={() => {
                     props.startAnalysis(props.image.name, "docker", props.image.fullId);
                   }}
+                  fullWidth
                 >
                   {props.historyEntry ? "Re-analyze" : "Analyze"}
                   {props.isJobActive && props.jobTarget === props.image.name && (
@@ -249,6 +252,7 @@ function ImageList(props: ImageListProps) {
   const [filter, setFilter] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "created" | "size">("created");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [isSingleColumn, setSingleColumn] = useState(true);
   const historyByImageRef = useMemo(() => {
     const map = new Map<string, HistoryMetadata>();
     props.historyEntries.forEach((entry) => {
@@ -358,6 +362,16 @@ function ImageList(props: ImageListProps) {
         >
           Refresh list
         </Button>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isSingleColumn}
+              onChange={(event) => setSingleColumn(event.target.checked)}
+              disabled={props.isJobActive}
+            />
+          }
+          label="Single column"
+        />
       </Stack>
       {props.images.length === 0 ? (
         <Alert severity="info">
@@ -368,28 +382,35 @@ function ImageList(props: ImageListProps) {
           No images match the current filter. Clear the filter to see all images.
         </Alert>
       ) : (
-        <Grid container spacing={2} alignItems="stretch">
-          {sortedImages.map((image) => {
-            const historyEntry = image.fullId
-              ? historyByImageRef.get(image.fullId)
-              : undefined;
-            return (
-              <Grid item xs={12} md={6} key={`${image.id}-${image.name}`}>
-                <ImageCard
-                  image={image}
-                  historyEntry={historyEntry}
-                  isJobActive={props.isJobActive}
-                  jobTarget={props.jobTarget}
-                  jobStatus={props.jobStatus}
-                  jobMessage={props.jobMessage}
-                  jobElapsedSeconds={props.jobElapsedSeconds}
-                  openHistoryEntry={props.openHistoryEntry}
-                  startAnalysis={props.startAnalysis}
-                />
-              </Grid>
-            );
-          })}
-        </Grid>
+        <Box sx={{ mx: isSingleColumn ? { xs: 0, md: 6 } : 0 }}>
+          <Grid container spacing={2} alignItems="stretch">
+            {sortedImages.map((image) => {
+              const historyEntry = image.fullId
+                ? historyByImageRef.get(image.fullId)
+                : undefined;
+              return (
+                <Grid
+                  item
+                  xs={12}
+                  md={isSingleColumn ? 12 : 6}
+                  key={`${image.id}-${image.name}`}
+                >
+                  <ImageCard
+                    image={image}
+                    historyEntry={historyEntry}
+                    isJobActive={props.isJobActive}
+                    jobTarget={props.jobTarget}
+                    jobStatus={props.jobStatus}
+                    jobMessage={props.jobMessage}
+                    jobElapsedSeconds={props.jobElapsedSeconds}
+                    openHistoryEntry={props.openHistoryEntry}
+                    startAnalysis={props.startAnalysis}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Box>
       )}
     </>
   );
