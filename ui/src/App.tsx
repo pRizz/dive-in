@@ -172,7 +172,8 @@ function ImageCard(props: ImageCardProps) {
             <Stack direction="column" spacing={1} alignItems="stretch">
               {props.historyEntry ? (
                 <Button
-                  variant="outlined"
+                  variant="contained"
+                  color="primary"
                   disabled={props.isJobActive}
                   onClick={() => props.openHistoryEntry(props.historyEntry?.id ?? "")}
                   fullWidth
@@ -182,7 +183,8 @@ function ImageCard(props: ImageCardProps) {
               ) : null}
               <Box sx={{ position: "relative" }}>
                 <Button
-                  variant="outlined"
+                  variant={props.historyEntry ? "outlined" : "contained"}
+                  color="primary"
                   disabled={props.isJobActive}
                   onClick={() => {
                     props.startAnalysis(props.image.name, "docker", props.image.fullId);
