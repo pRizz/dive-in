@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createDockerDesktopClient } from "@docker/extension-api-client";
 import {
   Typography,
@@ -453,6 +453,7 @@ export function App() {
   >(undefined);
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const [isCIGateDialogOpen, setCIGateDialogOpen] = useState(false);
+  const listScrollYRef = useRef(0);
 
   const ddClient = useMemo(() => {
     try {
@@ -635,6 +636,8 @@ export function App() {
       return;
     }
     try {
+      saveListScrollPosition();
+      scrollToTop();
       setActiveTab("analysis");
       const entry = (await ddClient.extension.vm.service.get(
         `/history/${id}`
@@ -661,6 +664,14 @@ export function App() {
     setJobMessage(undefined);
     setJobTarget(undefined);
     setJobElapsedSeconds(undefined);
+  };
+
+  const saveListScrollPosition = () => {
+    listScrollYRef.current = window.scrollY;
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   };
 
   const downloadFile = (data: BlobPart, filename: string, contentType: string) => {
@@ -731,6 +742,8 @@ export function App() {
       const dive = (await ddClient.extension.vm.service.get(
         `/analysis/${currentJobId}/result`
       )) as DiveResponse;
+      saveListScrollPosition();
+      scrollToTop();
       setAnalysisResult({
         image: {
           name: jobTarget ?? "Unknown image",
@@ -907,6 +920,9 @@ export function App() {
     setAnalysisResult(undefined);
     resetJobState();
     setSelectedHistoryId(undefined);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: listScrollYRef.current, left: 0, behavior: "auto" });
+    });
   };
 
   const updateCompareSelection = (side: CompareSide, id: string) => {
@@ -935,6 +951,8 @@ export function App() {
   };
 
   const openCompareView = (leftId: string, rightId: string) => {
+    saveListScrollPosition();
+    scrollToTop();
     setAnalysisResult(undefined);
     resetJobState();
     setSelectedHistoryId(undefined);
