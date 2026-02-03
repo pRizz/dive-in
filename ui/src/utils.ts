@@ -491,12 +491,16 @@ export function hasDiveFileList(dive: DiveResponse): boolean {
   });
 }
 
+/**
+ * Builds per-layer trees and an aggregate tree using only fileList data.
+ * This is a fallback when Dive does not provide native tree structures.
+ */
 export function buildDiveFileTreesFromFileList(
   dive: DiveResponse
 ): NormalizedFileTree {
+  const aggregate = buildAggregateTreeFromFileList(dive.layer ?? []);
   const layers = (dive.layer ?? []).map((layer) => {
-    const record = layer as unknown as Record<string, unknown>;
-    const flatNodes = normalizeFileTreeNodes(record.fileList);
+    const flatNodes = getFileListEntries(layer);
     return {
       layerId: layer.id,
       layerIndex: layer.index,
@@ -506,11 +510,137 @@ export function buildDiveFileTreesFromFileList(
     };
   });
 
-  const lastLayerWithTree = [...layers].reverse().find((layer) => layer.tree.length > 0);
   return {
-    aggregate: lastLayerWithTree?.tree ?? [],
+    aggregate,
     layers,
   };
+}
+
+/**
+ * Extracts the fileList entries for a layer, normalizing the shape into file tree nodes.
+ */
+function getFileListEntries(layer: DiveLayer): FileTreeNode[] {
+  const record = layer as unknown as Record<string, unknown>;
+  return normalizeFileTreeNodes(record.fileList);
+}
+
+/**
+ * Normalizes file list paths so they can be used as stable map keys.
+ */
+function normalizeFileListPath(pathValue: string): string | undefined {
+  const trimmed = pathValue.replace(/\/+$/, "");
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Merges layer fileList entries using last-layer-wins semantics per path.
+ */
+function collectFileListEntriesByPath(
+  layers: DiveLayer[]
+): Map<string, FileTreeNode> {
+  const entriesByPath = new Map<string, FileTreeNode>();
+
+  layers.forEach((layer) => {
+    const flatNodes = getFileListEntries(layer);
+    flatNodes.forEach((entry) => {
+      const rawKey = entry.path || entry.name;
+      if (!rawKey) {
+        return;
+      }
+      const key = normalizeFileListPath(rawKey);
+      if (!key) {
+        return;
+      }
+      entriesByPath.set(key, entry);
+    });
+  });
+
+  return entriesByPath;
+}
+
+/**
+ * Builds the aggregate (final filesystem) tree from fileList data.
+ */
+function buildAggregateTreeFromFileList(layers: DiveLayer[]): FileTreeNode[] {
+  const entriesByPath = collectFileListEntriesByPath(layers);
+
+  if (entriesByPath.size === 0) {
+    return [];
+  }
+
+  const prunedEntries = pruneEntriesByTerminalPaths(entriesByPath);
+  return buildTreeFromFlatList(prunedEntries);
+}
+
+/**
+ * Removes descendants when a non-directory entry claims a path.
+ *
+ * Algorithm:
+ * 1) Sort paths so descendants are grouped after their prefixes.
+ * 2) Track the most recent non-directory path (terminal prefix).
+ * 3) Skip any entries that live under an active terminal prefix.
+ *
+ * This keeps the final filesystem view consistent when a later layer
+ * replaces a directory with a file or symlink.
+ */
+export function pruneEntriesByTerminalPaths(
+  entriesByPath: Map<string, FileTreeNode>
+): FileTreeNode[] {
+  const entries = Array.from(entriesByPath.entries())
+    .map(([path, entry]) => ({ path, entry }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+
+  const pruned: FileTreeNode[] = [];
+  let activeTerminalPrefix: string | undefined;
+
+  for (const { path, entry } of entries) {
+    if (activeTerminalPrefix && path.startsWith(`${activeTerminalPrefix}/`)) {
+      continue;
+    }
+    if (activeTerminalPrefix && !path.startsWith(`${activeTerminalPrefix}/`)) {
+      activeTerminalPrefix = undefined;
+    }
+    pruned.push(entry);
+    if (entry.fileType !== "directory") {
+      activeTerminalPrefix = path;
+    }
+  }
+
+  return pruned;
+}
+
+/**
+ * Combines Dive's native trees with fileList-derived trees when available.
+ * Prefers native aggregate/layer trees, falling back to fileList trees only
+ * when a native tree is missing.
+ */
+export function buildDiveFileTrees(dive: DiveResponse): NormalizedFileTree {
+  const normalized = normalizeDiveFileTrees(dive);
+  if (!hasDiveFileList(dive)) {
+    return normalized;
+  }
+
+  const fileListTrees = buildDiveFileTreesFromFileList(dive);
+  const aggregate =
+    normalized.aggregate.length > 0 ? normalized.aggregate : fileListTrees.aggregate;
+
+  const baseLayers =
+    normalized.layers.length > 0 ? normalized.layers : fileListTrees.layers;
+  const layers = baseLayers.map((layer, index) => {
+    if (layer.tree.length > 0) {
+      return layer;
+    }
+    const fallback = fileListTrees.layers[index];
+    if (!fallback || fallback.tree.length === 0) {
+      return layer;
+    }
+    return {
+      ...layer,
+      tree: fallback.tree,
+    };
+  });
+
+  return { aggregate, layers };
 }
 
 export function buildWastedFileReferences(

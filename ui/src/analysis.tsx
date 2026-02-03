@@ -10,13 +10,12 @@ import {
 } from "@mui/material";
 import { AnalysisResult } from "./models";
 import {
-  buildDiveFileTreesFromFileList,
+  buildDiveFileTrees,
   buildWastedFileReferences,
   calculatePercent,
   formatBytes,
   formatPercent,
   hasDiveFileList,
-  normalizeDiveFileTrees,
 } from "./utils";
 import CircularProgressWithLabel from "./ring";
 import ImageTable from "./imagetable";
@@ -46,9 +45,7 @@ export default function Analysis(props: {
     if (shouldDeferTree && isTreeDeferred) {
       return { aggregate: [], layers: [] };
     }
-    return hasFileList
-      ? buildDiveFileTreesFromFileList(dive)
-      : normalizeDiveFileTrees(dive);
+    return buildDiveFileTrees(dive);
   }, [dive, hasFileList, isTreeDeferred, shouldDeferTree]);
   const wastedFileReferences = useMemo(
     () => buildWastedFileReferences(fileTreeData.aggregate),

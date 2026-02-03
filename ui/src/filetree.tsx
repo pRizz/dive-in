@@ -84,6 +84,16 @@ function getLayerLabel(layer: LayerFileTree, fallbackIndex: number) {
   return `Layer ${indexLabel}${suffix}`;
 }
 
+function calculateTreeSize(nodes: FileTreeNode[]): number {
+  const visit = (node: FileTreeNode): number => {
+    if (node.children && node.children.length > 0) {
+      return node.children.reduce((total, child) => total + visit(child), 0);
+    }
+    return typeof node.sizeBytes === "number" ? node.sizeBytes : 0;
+  };
+  return nodes.reduce((total, node) => total + visit(node), 0);
+}
+
 export default function FileTree(props: FileTreeProps) {
   const [selectedLayer, setSelectedLayer] = useState<string>("aggregate");
   const [hasSetInitialLayer, setHasSetInitialLayer] = useState(false);
@@ -94,6 +104,10 @@ export default function FileTree(props: FileTreeProps) {
   );
 
   const layers = useMemo(() => props.layers ?? [], [props.layers]);
+  const aggregateSizeBytes = useMemo(
+    () => calculateTreeSize(props.aggregateTree ?? []),
+    [props.aggregateTree]
+  );
   const largestLayerKey = useMemo(() => {
     if (layers.length === 0) {
       return undefined;
@@ -289,6 +303,8 @@ export default function FileTree(props: FileTreeProps) {
   };
 
   const hasLayerOptions = layers.length > 0;
+  const aggregateLabelSuffix =
+    aggregateSizeBytes > 0 ? ` — ${formatBytes(aggregateSizeBytes)}` : "";
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
@@ -308,7 +324,9 @@ export default function FileTree(props: FileTreeProps) {
               disabled={!hasLayerOptions}
               onChange={(event) => setSelectedLayer(event.target.value)}
             >
-              <MenuItem value="aggregate">Aggregate (all layers)</MenuItem>
+              <MenuItem value="aggregate">
+                {`Aggregate (all layers)${aggregateLabelSuffix}`}
+              </MenuItem>
               {layers.map((layer, index) => (
                 <MenuItem
                   key={layer.layerId ?? index}

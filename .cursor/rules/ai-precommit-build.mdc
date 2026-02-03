@@ -12,6 +12,7 @@ ensure they succeed:
 ```bash
 npm --prefix ui run build
 just ui-lint
+just ui-test
 ```
 
 If the build fails, fix the issues before committing.

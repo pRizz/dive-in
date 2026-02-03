@@ -13,7 +13,7 @@ ui-build:
   npm --prefix ui run build
 
 ui-test:
-  npm --prefix ui run test
+  npm --prefix ui run test:run
 
 ui-lint:
   npm --prefix ui run lint
