@@ -41,3 +41,8 @@ install-development-extension:
 
 reinstall-development-extension:
   docker build -t {{image}} . ; docker extension update {{image}} --force
+
+reinstall-or-install-development-extension:
+  just reinstall-development-extension || just install-development-extension
+
+alias dev := reinstall-or-install-development-extension
