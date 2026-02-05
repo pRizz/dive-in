@@ -1036,10 +1036,10 @@ export function App() {
         </Typography>
         <Typography variant="body1" color="text.secondary">
           Helps you explore Docker images, their layers, contents, and discover ways to shrink their size. Built on top of the excellent{" "}
-          <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noopener noreferrer">
+          <Link href="https://github.com/pRizz/dive" target="_blank" rel="noopener noreferrer">
             Dive CLI tool
           </Link>
-          .
+          , a fork of wagoodman/dive.
         </Typography>
       </Stack>
       <Divider sx={{ mt: 4, mb: 4 }} orientation="horizontal" flexItem />
@@ -1102,14 +1102,14 @@ export function App() {
                 </li>
               </Box>
               For more options (Windows, Arch, Nix, Docker), see the Dive install
-              docs.
+              docs (fork of wagoodman/dive).
               <Box sx={{ mt: 1 }}>
                 <Button
                   size="small"
                   variant="outlined"
                   onClick={() =>
                     ddClient?.host.openExternal(
-                      "https://github.com/wagoodman/dive#installation"
+                      "https://github.com/pRizz/dive#installation"
                     )
                   }
                 >
@@ -1249,13 +1249,13 @@ export function App() {
         <Typography variant="body2" color="text.secondary">
           Built on top of the excellent{" "}
           <Link
-            href="https://github.com/wagoodman/dive"
+            href="https://github.com/pRizz/dive"
             target="_blank"
             rel="noopener noreferrer"
           >
             Dive CLI
           </Link>
-          .
+          , a fork of wagoodman/dive.
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Made by{" "}

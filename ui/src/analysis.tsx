@@ -102,18 +102,18 @@ export default function Analysis(props: {
           </Typography>
           <Stack direction="row" spacing={2} flexWrap="wrap">
             <Link
-              href="https://github.com/wagoodman/dive"
+              href="https://github.com/pRizz/dive"
               target="_blank"
               rel="noreferrer"
             >
-              Dive docs
+              Dive docs (fork of wagoodman/dive)
             </Link>
             <Link
-              href="https://github.com/wagoodman/dive#file-tree"
+              href="https://github.com/pRizz/dive#file-tree"
               target="_blank"
               rel="noreferrer"
             >
-              How to read layer changes
+              How to read layer changes (fork docs for wagoodman/dive)
             </Link>
           </Stack>
         </Stack>
