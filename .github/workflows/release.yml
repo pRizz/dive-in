@@ -65,6 +65,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve-version.outputs.version }}
+      published: ${{ steps.changesets.outputs.published }}
+      has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
+      published_packages: ${{ steps.changesets.outputs.publishedPackages }}
+      pull_request_number: ${{ steps.changesets.outputs.pullRequestNumber }}
+      previous_tag: ${{ steps.previous-tag.outputs.tag }}
+      release_state: ${{ steps.resolve-version.outputs.release_state }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,6 +107,7 @@ jobs:
         id: resolve-version
         env:
           RELEASE_PUBLISHED: ${{ steps.changesets.outputs.published }}
+          RELEASE_PULL_REQUEST_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
         run: |
           set -euo pipefail
           latest_tag="$(
@@ -108,6 +115,8 @@ jobs:
               head -n 1
           )"
           if [[ -z "${latest_tag}" ]]; then
+            echo "release_state=no_semver_tags" >> "${GITHUB_OUTPUT}"
+            echo "version=" >> "${GITHUB_OUTPUT}"
             if [[ "${RELEASE_PUBLISHED}" == "true" ]]; then
               echo "Release reported published=true, but no semver tags were found."
               exit 1
@@ -116,6 +125,12 @@ jobs:
             exit 0
           fi
           if [[ "${latest_tag}" == "${{ steps.previous-tag.outputs.tag }}" ]]; then
+            echo "version=" >> "${GITHUB_OUTPUT}"
+            if [[ -n "${RELEASE_PULL_REQUEST_NUMBER}" ]]; then
+              echo "release_state=release_pr_opened" >> "${GITHUB_OUTPUT}"
+            else
+              echo "release_state=no_new_tag" >> "${GITHUB_OUTPUT}"
+            fi
             if [[ "${RELEASE_PUBLISHED}" == "true" ]]; then
               echo "Release reported published=true, but no new semver tag was created."
               exit 1
@@ -124,6 +139,7 @@ jobs:
             exit 0
           fi
           echo "version=${latest_tag}" >> "${GITHUB_OUTPUT}"
+          echo "release_state=published" >> "${GITHUB_OUTPUT}"
 
   push-image:
     needs: release
@@ -132,3 +148,83 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.release.outputs.version }}
+
+  release-report:
+    needs:
+      - release
+      - push-image
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write release summary
+        env:
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_RESULT: ${{ needs.release.result }}
+          RELEASE_STATE: ${{ needs.release.outputs.release_state }}
+          RELEASE_PUBLISHED: ${{ needs.release.outputs.published }}
+          RELEASE_HAS_CHANGESETS: ${{ needs.release.outputs.has_changesets }}
+          RELEASE_VERSION: ${{ needs.release.outputs.version }}
+          RELEASE_PREVIOUS_TAG: ${{ needs.release.outputs.previous_tag }}
+          RELEASE_PULL_REQUEST_NUMBER: ${{ needs.release.outputs.pull_request_number }}
+          RELEASE_PUBLISHED_PACKAGES: ${{ needs.release.outputs.published_packages }}
+          PUSH_IMAGE_RESULT: ${{ needs.push-image.result }}
+          PUSH_IMAGE_VERSION: ${{ needs.push-image.outputs.version }}
+          PUSH_IMAGE_REF: ${{ needs.push-image.outputs.image }}
+          PUSH_IMAGE_LATEST_REF: ${{ needs.push-image.outputs.latest_image }}
+          PUSH_IMAGE_DIGEST: ${{ needs.push-image.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Release Summary"
+            echo
+            echo "### Release Job"
+            echo "- Result: \`${RELEASE_RESULT}\`"
+            echo "- State: \`${RELEASE_STATE:-unknown}\`"
+            echo "- Published: \`${RELEASE_PUBLISHED:-false}\`"
+            echo "- Has changesets: \`${RELEASE_HAS_CHANGESETS:-false}\`"
+            echo "- Version: \`${RELEASE_VERSION:-none}\`"
+            echo "- Previous tag: \`${RELEASE_PREVIOUS_TAG:-none}\`"
+            if [[ -n "${RELEASE_VERSION}" ]]; then
+              echo "- Tag: [${RELEASE_VERSION}](https://github.com/${REPOSITORY}/releases/tag/${RELEASE_VERSION})"
+            fi
+            if [[ -n "${RELEASE_PULL_REQUEST_NUMBER}" ]]; then
+              echo "- Release PR: [#${RELEASE_PULL_REQUEST_NUMBER}](https://github.com/${REPOSITORY}/pull/${RELEASE_PULL_REQUEST_NUMBER})"
+            else
+              echo "- Release PR: none"
+            fi
+            echo
+            echo "### Published Packages"
+            if [[ -z "${RELEASE_PUBLISHED_PACKAGES}" || "${RELEASE_PUBLISHED_PACKAGES}" == "[]" ]]; then
+              echo "- None"
+            elif command -v jq >/dev/null 2>&1 && jq -e . >/dev/null 2>&1 <<< "${RELEASE_PUBLISHED_PACKAGES}"; then
+              if [[ "$(jq -r 'length' <<< "${RELEASE_PUBLISHED_PACKAGES}")" == "0" ]]; then
+                echo "- None"
+              else
+                jq -r '.[] | "- \(.name)@\(.version)"' <<< "${RELEASE_PUBLISHED_PACKAGES}"
+              fi
+            else
+              echo "- Raw output (unable to parse JSON):"
+              echo
+              echo "\`\`\`json"
+              echo "${RELEASE_PUBLISHED_PACKAGES}"
+              echo "\`\`\`"
+            fi
+            echo
+            echo "### Docker Image Push"
+            echo "- Result: \`${PUSH_IMAGE_RESULT:-unknown}\`"
+            if [[ "${PUSH_IMAGE_RESULT}" == "skipped" && -z "${RELEASE_VERSION}" ]]; then
+              echo "- Status: skipped because no published version was produced."
+            elif [[ "${PUSH_IMAGE_RESULT}" == "success" ]]; then
+              echo "- Version: \`${PUSH_IMAGE_VERSION:-none}\`"
+              echo "- Image: \`${PUSH_IMAGE_REF:-none}\`"
+              echo "- Latest image: \`${PUSH_IMAGE_LATEST_REF:-none}\`"
+              echo "- Digest: \`${PUSH_IMAGE_DIGEST:-none}\`"
+            else
+              echo "- Status: not completed successfully."
+              echo "- Version: \`${PUSH_IMAGE_VERSION:-none}\`"
+              echo "- Image: \`${PUSH_IMAGE_REF:-none}\`"
+              echo "- Latest image: \`${PUSH_IMAGE_LATEST_REF:-none}\`"
+              echo "- Digest: \`${PUSH_IMAGE_DIGEST:-none}\`"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"

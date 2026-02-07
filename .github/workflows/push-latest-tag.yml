@@ -7,12 +7,30 @@ on:
         description: "Semver version for the image tag."
         required: true
         type: string
+    outputs:
+      version:
+        description: "Normalized semver version used for image tags."
+        value: ${{ jobs.push.outputs.version }}
+      image:
+        description: "Versioned image reference."
+        value: ${{ jobs.push.outputs.image }}
+      latest_image:
+        description: "Latest image reference."
+        value: ${{ jobs.push.outputs.latest_image }}
+      digest:
+        description: "Digest from docker/build-push-action."
+        value: ${{ jobs.push.outputs.digest }}
 
 jobs:
   push:
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME_DOCKERHUB: prizz/deep-dive
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image: ${{ steps.image-refs.outputs.image }}
+      latest_image: ${{ steps.image-refs.outputs.latest_image }}
+      digest: ${{ steps.build-push.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,14 +62,24 @@ jobs:
           normalized_tag="${VERSION_INPUT#v}"
           echo "version=${normalized_tag}" >> "${GITHUB_OUTPUT}"
 
+      - name: Resolve image references
+        id: image-refs
+        run: |
+          set -euo pipefail
+          versioned_image="${IMAGE_NAME_DOCKERHUB}:${{ steps.version.outputs.version }}"
+          latest_image="${IMAGE_NAME_DOCKERHUB}:latest"
+          echo "image=${versioned_image}" >> "${GITHUB_OUTPUT}"
+          echo "latest_image=${latest_image}" >> "${GITHUB_OUTPUT}"
+
       - name: Build and push
+        id: build-push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.IMAGE_NAME_DOCKERHUB }}:${{ steps.version.outputs.version }}
-            ${{ env.IMAGE_NAME_DOCKERHUB }}:latest
+            ${{ steps.image-refs.outputs.image }}
+            ${{ steps.image-refs.outputs.latest_image }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
