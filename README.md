@@ -14,7 +14,7 @@ Quick install:
 docker extension install prizz/deep-dive:latest
 ```
 
-Built on top of [pRizz/dive](https://github.com/pRizz/dive), a fork of the excellent CLI tool [wagoodman/dive](https://github.com/wagoodman/dive).
+Built on top of the Dive CLI: [pRizz/dive](https://github.com/pRizz/dive), a fork of the excellent [wagoodman/dive](https://github.com/wagoodman/dive) CLI tool.
 
 Based on the original extension by Prakhar Srivastav:
 https://github.com/prakhar1989/dive-in

@@ -1240,7 +1240,7 @@ export function App() {
           </Typography>
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Built on top of the excellent Dive CLI:{" "}
+          Built on top of the Dive CLI:{" "}
           <Link
             href="https://github.com/pRizz/dive"
             target="_blank"
@@ -1248,11 +1248,11 @@ export function App() {
           >
             pRizz/dive
           </Link>
-          , a fork of{" "}
+          , a fork of the excellent{" "}
           <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noopener noreferrer">
             wagoodman/dive
           </Link>
-          .
+          {" "}CLI tool.
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Made by{" "}
