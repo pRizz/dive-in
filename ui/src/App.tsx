@@ -1034,17 +1034,6 @@ export function App() {
           />
           Deep Dive
         </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Helps you explore Docker images, their layers, contents, and discover ways to shrink their size. Built on top of the excellent Dive CLI tool:{" "}
-          <Link href="https://github.com/pRizz/dive" target="_blank" rel="noopener noreferrer">
-            pRizz/dive
-          </Link>
-          , a fork of{" "}
-          <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noopener noreferrer">
-            wagoodman/dive
-          </Link>
-          .
-        </Typography>
       </Stack>
       <Divider sx={{ mt: 4, mb: 4 }} orientation="horizontal" flexItem />
       {!ddClient ? null : statusAlert}
@@ -1248,13 +1237,6 @@ export function App() {
           </Typography>
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Free &amp; open source on{" "}
-          <Link href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-            GitHub
-          </Link>
-          .
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
           Built on top of the excellent Dive CLI:{" "}
           <Link
             href="https://github.com/pRizz/dive"
@@ -1278,6 +1260,13 @@ export function App() {
           <Link href="https://github.com/prakhar1989/dive-in" target="_blank" rel="noopener noreferrer">
             Prakhar Srivastav&apos;s work
           </Link>
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Free &amp; open source on{" "}
+          <Link href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+            GitHub
+          </Link>
+          .
         </Typography>
         <Stack direction="row" spacing={2} justifyContent="center">
           <Link href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
