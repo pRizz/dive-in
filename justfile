@@ -9,9 +9,12 @@ build: ui-build docker-build
 
 test: ui-test vm-test
 
-check: ui-format-check ui-lint ui-test ui-build vm-fmt-check vm-vet vm-test
+check: name-audit ui-format-check ui-lint ui-test ui-build vm-fmt-check vm-vet vm-test
 
 fix: ui-format
+
+name-audit:
+  bash scripts/check-project-name-references.sh
 
 ui-dev:
   bun run --cwd ui dev

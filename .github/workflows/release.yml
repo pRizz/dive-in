@@ -18,6 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Enforce project naming
+        run: bash scripts/check-project-name-references.sh
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:

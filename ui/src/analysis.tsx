@@ -241,8 +241,8 @@ export default function Analysis(props: {
             </Typography>
             <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noreferrer">
               wagoodman/dive
-            </Link>
-            {' '}(upstream)
+            </Link>{' '}
+            (upstream)
           </Typography>
         </Stack>
         <Stack direction="row" spacing={3} flexWrap="wrap" rowGap={3}>
