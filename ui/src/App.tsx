@@ -42,6 +42,7 @@ import {
   TWITTER_URL,
 } from "./constants";
 import { extractId, formatBytes, formatRelativeTimeFromNow, getErrorMessage } from "./utils";
+import { formatJobStatusDisplay } from "./job-status";
 import {
   AnalysisResult,
   AnalysisSource,
@@ -127,9 +128,13 @@ function ImageCard(props: ImageCardProps) {
       : undefined;
   const aliases = props.image.aliases.filter((alias) => alias !== props.image.name);
   const elapsedLabel = formatElapsed(props.jobElapsedSeconds);
-  const statusLabel = elapsedLabel
-    ? `Status: ${props.jobStatus} (${elapsedLabel})`
-    : `Status: ${props.jobStatus}`;
+  const statusDisplay = props.jobStatus
+    ? formatJobStatusDisplay({
+        jobStatus: props.jobStatus,
+        jobMessage: props.jobMessage,
+        elapsedLabel,
+      })
+    : undefined;
 
   return (
     <>
@@ -217,22 +222,16 @@ function ImageCard(props: ImageCardProps) {
             </Stack>
           </CardActions>
         </Stack>
-        {props.jobTarget === props.image.name && props.jobStatus ? (
+        {props.jobTarget === props.image.name && statusDisplay ? (
           <CardContent sx={{ pt: 0 }}>
-            {props.jobMessage ? (
-              <>
-                <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>
-                  {props.jobMessage}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {statusLabel}
-                </Typography>
-              </>
-            ) : (
-              <Typography variant="caption" color="text.secondary">
-                {statusLabel}
+            <Typography variant="caption" color="text.secondary">
+              {statusDisplay.statusLine}
+            </Typography>
+            {statusDisplay.detailMessage ? (
+              <Typography variant="body2" color="text.primary" sx={{ mt: 0.5 }}>
+                {statusDisplay.detailMessage}
               </Typography>
-            )}
+            ) : null}
             {props.isJobActive ? <LinearProgress sx={{ mt: 1 }} /> : null}
           </CardContent>
         ) : null}
@@ -809,64 +808,64 @@ export function App() {
     }
   }, [ddClient]);
 
-  const ArchiveAnalyzer = () => (
-    <Stack spacing={2}>
-      <TextField
-        label="Archive path"
-        helperText="Enter the full local path to a docker-archive tar file."
-        value={archivePath}
-        disabled={isJobActive}
-        onChange={(event) => setArchivePath(event.target.value)}
-        fullWidth
-      />
-      <Box sx={{ position: "relative" }}>
-        <Button
-          variant="outlined"
-          disabled={isJobActive || archivePath.trim() === ""}
-          onClick={() => startAnalysis(archivePath.trim(), "docker-archive")}
-        >
-          Analyze archive
-          {isJobActive && jobTarget === archivePath.trim() && (
-            <CircularProgress
-              size={24}
-              sx={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                marginTop: "-12px",
-                marginLeft: "-12px",
-              }}
-            />
-          )}
-        </Button>
-      </Box>
-      {jobTarget === archivePath.trim() && jobStatus ? (
-        <Stack spacing={1}>
-          {jobMessage ? (
-            <>
-              <Typography variant="body2" color="text.primary">
-                {jobMessage}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Status: {jobStatus}
-                {jobElapsedSeconds !== undefined
-                  ? ` (${formatElapsed(jobElapsedSeconds) ?? "0s"})`
-                  : ""}
-              </Typography>
-            </>
-          ) : (
+  const ArchiveAnalyzer = () => {
+    const archiveTarget = archivePath.trim();
+    const archiveStatusDisplay =
+      jobTarget === archiveTarget && jobStatus
+        ? formatJobStatusDisplay({
+            jobStatus,
+            jobMessage,
+            elapsedLabel: formatElapsed(jobElapsedSeconds),
+          })
+        : undefined;
+
+    return (
+      <Stack spacing={2}>
+        <TextField
+          label="Archive path"
+          helperText="Enter the full local path to a docker-archive tar file."
+          value={archivePath}
+          disabled={isJobActive}
+          onChange={(event) => setArchivePath(event.target.value)}
+          fullWidth
+        />
+        <Box sx={{ position: "relative" }}>
+          <Button
+            variant="outlined"
+            disabled={isJobActive || archiveTarget === ""}
+            onClick={() => startAnalysis(archiveTarget, "docker-archive")}
+          >
+            Analyze archive
+            {isJobActive && jobTarget === archiveTarget && (
+              <CircularProgress
+                size={24}
+                sx={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  marginTop: "-12px",
+                  marginLeft: "-12px",
+                }}
+              />
+            )}
+          </Button>
+        </Box>
+        {archiveStatusDisplay ? (
+          <Stack spacing={1}>
             <Typography variant="caption" color="text.secondary">
-              Status: {jobStatus}
-              {jobElapsedSeconds !== undefined
-                ? ` (${formatElapsed(jobElapsedSeconds) ?? "0s"})`
-                : ""}
+              {archiveStatusDisplay.statusLine}
             </Typography>
-          )}
-          {isJobActive ? <LinearProgress /> : null}
-        </Stack>
-      ) : null}
-    </Stack>
-  );
+            {archiveStatusDisplay.detailMessage ? (
+              <Typography variant="body2" color="text.primary">
+                {archiveStatusDisplay.detailMessage}
+              </Typography>
+            ) : null}
+            {isJobActive ? <LinearProgress /> : null}
+          </Stack>
+        ) : null}
+      </Stack>
+    );
+  };
 
   useEffect(() => {
     if (!ddClient) {
@@ -994,8 +993,28 @@ export function App() {
     setSelectedHistoryId(undefined);
   };
 
+  const failedStatusDisplay =
+    jobStatus === "failed"
+      ? formatJobStatusDisplay({
+          jobStatus,
+          jobMessage,
+          elapsedLabel: formatElapsed(jobElapsedSeconds),
+          target: jobTarget,
+        })
+      : undefined;
+
+  const completedStatusDisplay =
+    jobStatus && jobTarget && !isJobActive
+      ? formatJobStatusDisplay({
+          jobStatus,
+          jobMessage,
+          elapsedLabel: formatElapsed(jobElapsedSeconds),
+          target: jobTarget,
+        })
+      : undefined;
+
   const statusAlert =
-    jobStatus === "failed" ? (
+    failedStatusDisplay ? (
       <Alert
         severity="error"
         action={
@@ -1005,15 +1024,11 @@ export function App() {
         }
       >
         <Stack spacing={0.5}>
-          <Typography variant="body2">
-            Status: {jobStatus}
-            {jobElapsedSeconds !== undefined
-              ? ` (${formatElapsed(jobElapsedSeconds) ?? "0s"})`
-              : ""}
-            {jobTarget ? ` — ${jobTarget}` : ""}
-          </Typography>
-          {jobMessage ? (
-            <Typography variant="body2">{jobMessage}</Typography>
+          <Typography variant="body2">{failedStatusDisplay.statusLine}</Typography>
+          {failedStatusDisplay.detailMessage ? (
+            <Typography variant="body2">
+              {failedStatusDisplay.detailMessage}
+            </Typography>
           ) : null}
           {errorHint ? (
             <Typography variant="body2">{errorHint}</Typography>
@@ -1153,13 +1168,9 @@ export function App() {
           <Box role="tabpanel" hidden={activeTab !== "analysis"} sx={{ mt: 3 }}>
             {analysis ? (
               <Stack spacing={2}>
-                {jobStatus && jobTarget && !isJobActive ? (
+                {completedStatusDisplay ? (
                   <Typography variant="body2" color="text.secondary">
-                    Status: {jobStatus}
-                    {jobElapsedSeconds !== undefined
-                      ? ` (${formatElapsed(jobElapsedSeconds) ?? "0s"})`
-                      : ""}
-                    {jobTarget ? ` — ${jobTarget}` : ""}
+                    {completedStatusDisplay.statusLine}
                   </Typography>
                 ) : null}
                 <Analysis

@@ -1,26 +1,50 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
+  Box,
   Button,
   Card,
   CardContent,
+  CircularProgress,
   Link,
   Stack,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { AnalysisResult } from "./models";
 import {
-  buildDiveFileTrees,
-  buildWastedFileReferences,
+  AnalysisResult,
+  DiveResponse,
+  FileReference,
+  NormalizedFileTree,
+} from "./models";
+import {
   calculatePercent,
   formatBytes,
   formatPercent,
-  hasDiveFileList,
+  getErrorMessage,
 } from "./utils";
 import CircularProgressWithLabel from "./ring";
 import ImageTable from "./imagetable";
 import LayersTable from "./layerstable";
 import FileTree from "./filetree";
+import { computeFileTreeArtifacts } from "./filetree-analysis";
+import {
+  FileTreeArtifacts,
+  FileTreeWorkerRequest,
+  FileTreeWorkerResponse,
+} from "./filetree-worker.types";
+
+type FileTreeLoadStatus = "loading" | "ready" | "error";
+
+const WORKER_FALLBACK_WARNING =
+  "File tree analysis worker was unavailable, so processing ran on the main thread. You may notice UI lag.";
+
+function createEmptyFileTreeData(): NormalizedFileTree {
+  return {
+    aggregate: [],
+    layers: [],
+  };
+}
 
 export default function Analysis(props: {
   analysis: AnalysisResult;
@@ -30,27 +54,160 @@ export default function Analysis(props: {
   historyId?: string;
 }) {
   const { image, dive } = props.analysis;
-  const hasFileList = useMemo(() => hasDiveFileList(dive), [dive]);
-  const imageSizeBytes =
-    typeof image.sizeBytes === "number" ? image.sizeBytes : dive.image.sizeBytes;
-  const shouldDeferTree =
-    hasFileList && typeof imageSizeBytes === "number" && imageSizeBytes > 200 * 1024 * 1024;
-  const [isTreeDeferred, setIsTreeDeferred] = useState(shouldDeferTree);
+  const [fileTreeStatus, setFileTreeStatus] =
+    useState<FileTreeLoadStatus>("loading");
+  const [fileTreeData, setFileTreeData] = useState<NormalizedFileTree>(
+    () => createEmptyFileTreeData()
+  );
+  const [wastedFileReferences, setWastedFileReferences] = useState<
+    FileReference[]
+  >([]);
+  const [fileTreeWarning, setFileTreeWarning] = useState<string | undefined>(
+    undefined
+  );
+  const [fileTreeError, setFileTreeError] = useState<string | undefined>(
+    undefined
+  );
+
+  const workerRef = useRef<Worker | null>(null);
+  const requestIdRef = useRef(0);
+  const pendingDiveByRequestRef = useRef<Map<number, DiveResponse>>(new Map());
+
+  const applyFileTreeArtifacts = useCallback(
+    (
+      requestId: number,
+      artifacts: FileTreeArtifacts,
+      warning?: string
+    ): boolean => {
+      if (requestId !== requestIdRef.current) {
+        return false;
+      }
+      pendingDiveByRequestRef.current.delete(requestId);
+      setFileTreeData(artifacts.fileTreeData);
+      setWastedFileReferences(artifacts.wastedFileReferences);
+      setFileTreeStatus("ready");
+      setFileTreeError(undefined);
+      setFileTreeWarning(warning);
+      return true;
+    },
+    []
+  );
+
+  const failFileTreeAnalysis = useCallback((requestId: number, message: string) => {
+    if (requestId !== requestIdRef.current) {
+      return;
+    }
+    pendingDiveByRequestRef.current.delete(requestId);
+    setFileTreeStatus("error");
+    setFileTreeError(message);
+    setFileTreeWarning(undefined);
+  }, []);
+
+  const computeOnMainThread = useCallback(
+    (requestId: number, requestDive: DiveResponse, warningMessage: string) => {
+      setTimeout(() => {
+        try {
+          const artifacts = computeFileTreeArtifacts(requestDive);
+          applyFileTreeArtifacts(requestId, artifacts, warningMessage);
+        } catch (error) {
+          failFileTreeAnalysis(requestId, getErrorMessage(error));
+        }
+      }, 0);
+    },
+    [applyFileTreeArtifacts, failFileTreeAnalysis]
+  );
+
+  const fallbackForRequest = useCallback(
+    (requestId: number, reason?: string) => {
+      const requestDive = pendingDiveByRequestRef.current.get(requestId);
+      if (!requestDive) {
+        return;
+      }
+      const warning = reason
+        ? `${WORKER_FALLBACK_WARNING} (${reason})`
+        : WORKER_FALLBACK_WARNING;
+      computeOnMainThread(requestId, requestDive, warning);
+    },
+    [computeOnMainThread]
+  );
 
   useEffect(() => {
-    setIsTreeDeferred(shouldDeferTree);
-  }, [shouldDeferTree]);
+    const pendingRequests = pendingDiveByRequestRef.current;
+    try {
+      const worker = new Worker(new URL("./filetree.worker.ts", import.meta.url), {
+        type: "module",
+      });
+      workerRef.current = worker;
 
-  const fileTreeData = useMemo(() => {
-    if (shouldDeferTree && isTreeDeferred) {
-      return { aggregate: [], layers: [] };
+      worker.onmessage = (event: MessageEvent<FileTreeWorkerResponse>) => {
+        const response = event.data;
+        if (response.type === "success") {
+          applyFileTreeArtifacts(response.requestId, {
+            fileTreeData: response.fileTreeData,
+            wastedFileReferences: response.wastedFileReferences,
+          });
+          return;
+        }
+        fallbackForRequest(response.requestId, response.message);
+      };
+
+      worker.onerror = (event: ErrorEvent) => {
+        worker.terminate();
+        if (workerRef.current === worker) {
+          workerRef.current = null;
+        }
+        const reason = event.message ? event.message : undefined;
+        fallbackForRequest(requestIdRef.current, reason);
+      };
+
+      worker.onmessageerror = () => {
+        worker.terminate();
+        if (workerRef.current === worker) {
+          workerRef.current = null;
+        }
+        fallbackForRequest(requestIdRef.current, "worker message could not be read");
+      };
+    } catch {
+      workerRef.current = null;
     }
-    return buildDiveFileTrees(dive);
-  }, [dive, hasFileList, isTreeDeferred, shouldDeferTree]);
-  const wastedFileReferences = useMemo(
-    () => buildWastedFileReferences(fileTreeData.aggregate),
-    [fileTreeData.aggregate]
-  );
+
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+      pendingRequests.clear();
+    };
+  }, [applyFileTreeArtifacts, fallbackForRequest]);
+
+  useEffect(() => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    pendingDiveByRequestRef.current.set(requestId, dive);
+    setFileTreeStatus("loading");
+    setFileTreeError(undefined);
+    setFileTreeWarning(undefined);
+    setFileTreeData(createEmptyFileTreeData());
+    setWastedFileReferences([]);
+
+    const worker = workerRef.current;
+    if (!worker) {
+      fallbackForRequest(requestId, "worker unavailable");
+      return;
+    }
+
+    try {
+      const request: FileTreeWorkerRequest = {
+        type: "compute",
+        requestId,
+        dive,
+      };
+      worker.postMessage(request);
+    } catch (error) {
+      fallbackForRequest(requestId, getErrorMessage(error));
+    }
+  }, [dive, fallbackForRequest]);
+
   const downloadDiveJson = () => {
     const data = JSON.stringify(dive, null, 2);
     const blob = new Blob([data], { type: "application/json" });
@@ -62,9 +219,6 @@ export default function Analysis(props: {
     window.URL.revokeObjectURL(url);
   };
   const isFileTreeEmpty = fileTreeData.aggregate.length === 0;
-  const handleBuildTree = () => {
-    setIsTreeDeferred(false);
-  };
   const wastedPercent = calculatePercent(
     dive.image.inefficientBytes,
     dive.image.sizeBytes
@@ -184,26 +338,61 @@ export default function Analysis(props: {
         </Typography>
         <Stack spacing={2}>
           <Typography variant="h3">Layer file tree</Typography>
-          <FileTree
-            aggregateTree={fileTreeData.aggregate}
-            layers={fileTreeData.layers}
-          />
+          {fileTreeWarning ? (
+            <Alert severity="warning">{fileTreeWarning}</Alert>
+          ) : null}
+          {fileTreeStatus === "error" ? (
+            <Alert severity="error">
+              Unable to build file tree: {fileTreeError ?? "Unknown error."}
+            </Alert>
+          ) : (
+            <Box sx={{ width: "100%", position: "relative" }}>
+              {fileTreeStatus === "ready" ? (
+                <FileTree
+                  aggregateTree={fileTreeData.aggregate}
+                  layers={fileTreeData.layers}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    minHeight: 260,
+                  }}
+                />
+              )}
+              {fileTreeStatus === "loading" ? (
+                <Box
+                  sx={(theme) => ({
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 1,
+                    zIndex: 1,
+                    borderRadius: 1,
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(18, 18, 18, 0.72)"
+                        : "rgba(255, 255, 255, 0.72)",
+                  })}
+                >
+                  <CircularProgress size={28} />
+                  <Typography variant="body2" color="text.secondary">
+                    Building file tree...
+                  </Typography>
+                </Box>
+              ) : null}
+            </Box>
+          )}
           <Typography variant="caption" color="text.secondary">
             Heads up: expanding very large folders (like node_modules) can make the
             UI laggy.
           </Typography>
-          {shouldDeferTree && isTreeDeferred ? (
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary">
-                This image is large. The file tree is built on demand to keep the UI
-                responsive.
-              </Typography>
-              <Button variant="outlined" onClick={handleBuildTree}>
-                Build file tree
-              </Button>
-            </Stack>
-          ) : null}
-          {isFileTreeEmpty && !isTreeDeferred ? (
+          {fileTreeStatus === "ready" && isFileTreeEmpty ? (
             <Stack spacing={1}>
               <Typography variant="body2" color="text.secondary">
                 No aggregate file tree data detected. You can download the raw Dive
@@ -231,7 +420,16 @@ export default function Analysis(props: {
               Removed or overwritten files that contribute to wasted space.
             </Typography>
           </Stack>
-          {wastedFileReferences.length > 0 ? (
+          {fileTreeStatus === "loading" ? (
+            <Typography variant="body2" color="text.secondary">
+              Crunching wasted file references...
+            </Typography>
+          ) : fileTreeStatus === "error" ? (
+            <Typography variant="body2" color="text.secondary">
+              Wasted file analysis is unavailable because file tree analysis
+              failed.
+            </Typography>
+          ) : wastedFileReferences.length > 0 ? (
             <ImageTable rows={wastedFileReferences}></ImageTable>
           ) : (
             <Typography variant="body2" color="text.secondary">
