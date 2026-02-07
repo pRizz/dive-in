@@ -1035,11 +1035,15 @@ export function App() {
           Deep Dive
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Helps you explore Docker images, their layers, contents, and discover ways to shrink their size. Built on top of the excellent{" "}
+          Helps you explore Docker images, their layers, contents, and discover ways to shrink their size. Built on top of the excellent Dive CLI tool:{" "}
           <Link href="https://github.com/pRizz/dive" target="_blank" rel="noopener noreferrer">
-            Dive CLI tool
+            pRizz/dive
           </Link>
-          , a fork of wagoodman/dive.
+          , a fork of{" "}
+          <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noopener noreferrer">
+            wagoodman/dive
+          </Link>
+          .
         </Typography>
       </Stack>
       <Divider sx={{ mt: 4, mb: 4 }} orientation="horizontal" flexItem />
@@ -1102,7 +1106,11 @@ export function App() {
                 </li>
               </Box>
               For more options (Windows, Arch, Nix, Docker), see the Dive install
-              docs (fork of wagoodman/dive).
+              docs (fork of{" "}
+              <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noopener noreferrer">
+                wagoodman/dive
+              </Link>
+              ).
               <Box sx={{ mt: 1 }}>
                 <Button
                   size="small"
@@ -1247,15 +1255,19 @@ export function App() {
           .
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Built on top of the excellent{" "}
+          Built on top of the excellent Dive CLI:{" "}
           <Link
             href="https://github.com/pRizz/dive"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Dive CLI
+            pRizz/dive
           </Link>
-          , a fork of wagoodman/dive.
+          , a fork of{" "}
+          <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noopener noreferrer">
+            wagoodman/dive
+          </Link>
+          .
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Made by{" "}

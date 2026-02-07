@@ -101,19 +101,32 @@ export default function Analysis(props: {
             Helpful links
           </Typography>
           <Stack direction="row" spacing={2} flexWrap="wrap">
+            <Typography variant="body2" color="text.secondary">
+              Dive docs:{" "}
+              <Link
+                href="https://github.com/pRizz/dive"
+                target="_blank"
+                rel="noreferrer"
+              >
+                pRizz/dive
+              </Link>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Layer changes docs:{" "}
+              <Link
+                href="https://github.com/pRizz/dive#file-tree"
+                target="_blank"
+                rel="noreferrer"
+              >
+                pRizz/dive
+              </Link>
+            </Typography>
             <Link
-              href="https://github.com/pRizz/dive"
+              href="https://github.com/wagoodman/dive"
               target="_blank"
               rel="noreferrer"
             >
-              Dive docs (fork of wagoodman/dive)
-            </Link>
-            <Link
-              href="https://github.com/pRizz/dive#file-tree"
-              target="_blank"
-              rel="noreferrer"
-            >
-              How to read layer changes (fork docs for wagoodman/dive)
+              wagoodman/dive (upstream)
             </Link>
           </Stack>
         </Stack>
