@@ -65,3 +65,8 @@ reinstall-or-install-development-extension:
   just reinstall-development-extension || just install-development-extension
 
 alias dev := reinstall-or-install-development-extension
+
+reinstall-development-extension-clean:
+  docker builder prune -af
+  docker image rm -f {{image}}
+  just reinstall-or-install-development-extension
