@@ -5,11 +5,8 @@ on:
     inputs:
       version:
         description: "Semver version for the image tag."
-        required: false
+        required: true
         type: string
-  push:
-    tags:
-      - "*"
 
 jobs:
   push:
@@ -34,29 +31,17 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Resolve latest version tag
+      - name: Resolve requested version
         id: version
         env:
           VERSION_INPUT: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          if [[ -n "${VERSION_INPUT}" ]]; then
-            echo "version=${VERSION_INPUT}" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-
-          tag_pattern="^v?[0-9]+\.[0-9]+\.[0-9]+$"
-          latest_tag="$(
-            git tag --list |
-              grep -E "${tag_pattern}" |
-              sort -V |
-              tail -n 1
-          )"
-          if [[ -z "${latest_tag}" ]]; then
-            echo "No version tags found matching ${tag_pattern}."
+          if [[ -z "${VERSION_INPUT}" ]]; then
+            echo "No version input was provided."
             exit 1
           fi
-          normalized_tag="${latest_tag#v}"
+          normalized_tag="${VERSION_INPUT#v}"
           echo "version=${normalized_tag}" >> "${GITHUB_OUTPUT}"
 
       - name: Build and push

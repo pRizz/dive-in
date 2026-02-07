@@ -33,12 +33,9 @@ jobs:
         id: previous-tag
         run: |
           set -euo pipefail
-          tag_pattern="^[0-9]+\.[0-9]+\.[0-9]+$"
           previous_tag="$(
-            git tag --list |
-              grep -E "${tag_pattern}" |
-              sort -V |
-              tail -n 1
+            git tag --sort=-version:refname --list '[0-9]*.[0-9]*.[0-9]*' |
+              head -n 1
           )"
           echo "tag=${previous_tag}" >> "${GITHUB_OUTPUT}"
       - name: Create release PR or publish
@@ -51,20 +48,27 @@ jobs:
 
       - name: Resolve published version
         id: resolve-version
+        env:
+          RELEASE_PUBLISHED: ${{ steps.changesets.outputs.published }}
         run: |
           set -euo pipefail
-          tag_pattern="^[0-9]+\.[0-9]+\.[0-9]+$"
           latest_tag="$(
-            git tag --list |
-              grep -E "${tag_pattern}" |
-              sort -V |
-              tail -n 1
+            git tag --sort=-version:refname --list '[0-9]*.[0-9]*.[0-9]*' |
+              head -n 1
           )"
           if [[ -z "${latest_tag}" ]]; then
-            echo "No version tags found matching ${tag_pattern}."
-            exit 1
+            if [[ "${RELEASE_PUBLISHED}" == "true" ]]; then
+              echo "Release reported published=true, but no semver tags were found."
+              exit 1
+            fi
+            echo "No semver tags found; skipping image publish."
+            exit 0
           fi
           if [[ "${latest_tag}" == "${{ steps.previous-tag.outputs.tag }}" ]]; then
+            if [[ "${RELEASE_PUBLISHED}" == "true" ]]; then
+              echo "Release reported published=true, but no new semver tag was created."
+              exit 1
+            fi
             echo "No new tag detected; skipping image publish."
             exit 0
           fi
