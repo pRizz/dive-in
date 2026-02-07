@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createDockerDesktopClient } from '@docker/extension-api-client';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createDockerDesktopClient } from '@docker/extension-api-client/dist/index.js';
 import {
   Typography,
   Card,
@@ -421,6 +421,7 @@ export function App() {
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const [isCIGateDialogOpen, setCIGateDialogOpen] = useState(false);
   const listScrollYRef = useRef(0);
+  const pendingDetailScrollTopRef = useRef(false);
 
   const ddClient = useMemo(() => {
     try {
@@ -608,10 +609,10 @@ export function App() {
     }
     try {
       saveListScrollPosition();
-      scrollToTop();
       setActiveTab('analysis');
       const entry = (await ddClient.extension.vm.service.get(`/history/${id}`)) as HistoryEntry;
       setCompareIds(undefined);
+      queueDetailScrollTop();
       setAnalysisResult({
         image: {
           name: entry.metadata.image,
@@ -639,8 +640,8 @@ export function App() {
     listScrollYRef.current = window.scrollY;
   };
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  const queueDetailScrollTop = () => {
+    pendingDetailScrollTopRef.current = true;
   };
 
   const downloadFile = (data: BlobPart, filename: string, contentType: string) => {
@@ -704,7 +705,7 @@ export function App() {
           `/analysis/${currentJobId}/result`,
         )) as DiveResponse;
         saveListScrollPosition();
-        scrollToTop();
+        queueDetailScrollTop();
         setAnalysisResult({
           image: {
             name: jobTarget ?? 'Unknown image',
@@ -905,13 +906,27 @@ export function App() {
 
   const openCompareView = (leftId: string, rightId: string) => {
     saveListScrollPosition();
-    scrollToTop();
+    queueDetailScrollTop();
     setAnalysisResult(undefined);
     resetJobState();
     setSelectedHistoryId(undefined);
     setCompareIds({ leftId, rightId });
     setActiveTab('analysis');
   };
+
+  useLayoutEffect(() => {
+    if (!pendingDetailScrollTopRef.current) {
+      return;
+    }
+    if (activeTab !== 'analysis') {
+      return;
+    }
+    if (!analysis && !compareIds) {
+      return;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    pendingDetailScrollTopRef.current = false;
+  }, [activeTab, analysis, compareIds]);
 
   const isJobActive = jobStatus === 'queued' || jobStatus === 'running';
   const tabsEnabled = bootstrapPhase === 'ready' && !!ddClient && isDiveInstalled;
