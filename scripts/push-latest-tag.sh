@@ -33,17 +33,14 @@ latest_image="prizz/deep-dive:latest"
 echo "Checking out ${latest_tag}..."
 git checkout "${latest_tag}"
 
-echo "Building ${image}..."
-docker build -t "${image}" .
-
-echo "Tagging ${image} as ${latest_image}..."
-docker tag "${image}" "${latest_image}"
-
-echo "Pushing ${image}..."
-docker push "${image}"
-
-echo "Pushing ${latest_image}..."
-docker push "${latest_image}"
+echo "Building and pushing ${image} and ${latest_image} with attestations..."
+docker buildx build \
+  --provenance=mode=max \
+  --sbom=true \
+  --tag "${image}" \
+  --tag "${latest_image}" \
+  --push \
+  .
 
 echo "Returning to main..."
 git checkout main

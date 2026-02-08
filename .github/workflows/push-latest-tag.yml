@@ -20,6 +20,12 @@ on:
       digest:
         description: "Digest from docker/build-push-action."
         value: ${{ jobs.push.outputs.digest }}
+      scout_policy_status:
+        description: "Docker Scout policy status (pass, fail, or error)."
+        value: ${{ jobs.push.outputs.scout_policy_status }}
+      scout_policy_exit_code:
+        description: "Exit code returned by docker scout policy."
+        value: ${{ jobs.push.outputs.scout_policy_exit_code }}
 
 jobs:
   push:
@@ -31,6 +37,8 @@ jobs:
       image: ${{ steps.image-refs.outputs.image }}
       latest_image: ${{ steps.image-refs.outputs.latest_image }}
       digest: ${{ steps.build-push.outputs.digest }}
+      scout_policy_status: ${{ steps.scout-policy.outputs.status }}
+      scout_policy_exit_code: ${{ steps.scout-policy.outputs.exit_code }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,8 +86,57 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
+          sbom: true
+          provenance: mode=max
           tags: |
             ${{ steps.image-refs.outputs.image }}
             ${{ steps.image-refs.outputs.latest_image }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Set up Docker Scout CLI
+        uses: docker/scout-cli-action@v1
+
+      - name: Evaluate Docker Scout policy (non-blocking)
+        id: scout-policy
+        env:
+          VERSIONED_IMAGE: ${{ steps.image-refs.outputs.image }}
+        run: |
+          set -euo pipefail
+          org="${IMAGE_NAME_DOCKERHUB%%/*}"
+          if [[ -z "${org}" || "${org}" == "${IMAGE_NAME_DOCKERHUB}" ]]; then
+            echo "Unable to resolve Docker Hub organization from IMAGE_NAME_DOCKERHUB=${IMAGE_NAME_DOCKERHUB}" >&2
+            echo "status=error" >> "${GITHUB_OUTPUT}"
+            echo "exit_code=1" >> "${GITHUB_OUTPUT}"
+            echo "org=" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          set +e
+          docker scout policy "${VERSIONED_IMAGE}" --org "${org}" --exit-code
+          scout_exit_code=$?
+          set -e
+          case "${scout_exit_code}" in
+            0) scout_status="pass" ;;
+            2) scout_status="fail" ;;
+            *) scout_status="error" ;;
+          esac
+          echo "status=${scout_status}" >> "${GITHUB_OUTPUT}"
+          echo "exit_code=${scout_exit_code}" >> "${GITHUB_OUTPUT}"
+          echo "org=${org}" >> "${GITHUB_OUTPUT}"
+
+      - name: Summarize Docker Scout policy
+        if: always()
+        env:
+          VERSIONED_IMAGE: ${{ steps.image-refs.outputs.image }}
+          SCOUT_POLICY_STATUS: ${{ steps.scout-policy.outputs.status }}
+          SCOUT_POLICY_EXIT_CODE: ${{ steps.scout-policy.outputs.exit_code }}
+          SCOUT_POLICY_ORG: ${{ steps.scout-policy.outputs.org }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Docker Scout Policy"
+            echo "- Image: \`${VERSIONED_IMAGE}\`"
+            echo "- Organization: \`${SCOUT_POLICY_ORG:-unknown}\`"
+            echo "- Status: \`${SCOUT_POLICY_STATUS:-error}\`"
+            echo "- Exit code: \`${SCOUT_POLICY_EXIT_CODE:-unknown}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"

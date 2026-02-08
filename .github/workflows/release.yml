@@ -173,6 +173,8 @@ jobs:
           PUSH_IMAGE_REF: ${{ needs.push-image.outputs.image }}
           PUSH_IMAGE_LATEST_REF: ${{ needs.push-image.outputs.latest_image }}
           PUSH_IMAGE_DIGEST: ${{ needs.push-image.outputs.digest }}
+          PUSH_IMAGE_SCOUT_POLICY_STATUS: ${{ needs.push-image.outputs.scout_policy_status }}
+          PUSH_IMAGE_SCOUT_POLICY_EXIT_CODE: ${{ needs.push-image.outputs.scout_policy_exit_code }}
         run: |
           set -euo pipefail
 
@@ -216,16 +218,19 @@ jobs:
             echo "- Result: \`${PUSH_IMAGE_RESULT:-unknown}\`"
             if [[ "${PUSH_IMAGE_RESULT}" == "skipped" && -z "${RELEASE_VERSION}" ]]; then
               echo "- Status: skipped because no published version was produced."
+              echo "- Docker Scout policy (non-blocking): not evaluated"
             elif [[ "${PUSH_IMAGE_RESULT}" == "success" ]]; then
               echo "- Version: \`${PUSH_IMAGE_VERSION:-none}\`"
               echo "- Image: \`${PUSH_IMAGE_REF:-none}\`"
               echo "- Latest image: \`${PUSH_IMAGE_LATEST_REF:-none}\`"
               echo "- Digest: \`${PUSH_IMAGE_DIGEST:-none}\`"
+              echo "- Docker Scout policy (non-blocking): \`${PUSH_IMAGE_SCOUT_POLICY_STATUS:-unknown}\` (exit \`${PUSH_IMAGE_SCOUT_POLICY_EXIT_CODE:-unknown}\`)"
             else
               echo "- Status: not completed successfully."
               echo "- Version: \`${PUSH_IMAGE_VERSION:-none}\`"
               echo "- Image: \`${PUSH_IMAGE_REF:-none}\`"
               echo "- Latest image: \`${PUSH_IMAGE_LATEST_REF:-none}\`"
               echo "- Digest: \`${PUSH_IMAGE_DIGEST:-none}\`"
+              echo "- Docker Scout policy (non-blocking): \`${PUSH_IMAGE_SCOUT_POLICY_STATUS:-unknown}\` (exit \`${PUSH_IMAGE_SCOUT_POLICY_EXIT_CODE:-unknown}\`)"
             fi
           } >> "${GITHUB_STEP_SUMMARY}"

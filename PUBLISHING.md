@@ -43,16 +43,23 @@ Exact values depend on your SDK/API target.
 
 ## 2) Build and push the image to Docker Hub
 
-Extensions are distributed as images. The docs’ “package and release” flow is
-literally: `docker build` then `docker push`, with proper tagging/versioning.
+Extensions are distributed as images. Use `docker buildx build --push` with
+explicit attestations so Docker Scout can validate supply-chain metadata.
 ([Docker Documentation][4])
 
 Example:
 
 ```bash
-docker build -t prizz/deep-dive:0.1.0 .
-docker push prizz/deep-dive:0.1.0
+docker buildx build \
+  --provenance=mode=max \
+  --sbom=true \
+  --tag prizz/deep-dive:0.1.0 \
+  --push \
+  .
 ```
+
+Note: plain `docker build` + `docker push` does not attach the SBOM and
+max-mode provenance attestations required by Docker Scout supply-chain policy.
 
 Tip: do not mutate an already-published tag. Docker Desktop can complain if the
 local image differs from what is published under the same reference. ([Docker
@@ -70,6 +77,12 @@ Validation expects Docker Hub tags in the form `X.Y.Z` (no `v` prefix).
 
 ```bash
 docker extension validate -a -s -i prizz/deep-dive:0.1.0
+```
+
+To verify Docker Scout supply-chain attestations:
+
+```bash
+docker scout policy prizz/deep-dive:0.1.0 --org prizz --exit-code
 ```
 
 ---
@@ -115,7 +128,9 @@ If validation passes, Docker’s extensions team authorizes publication. ([GitHu
 ## Deep Dive publishing note
 
 Publishing for Deep Dive is currently semi-manual. CI will create a new git tag,
-then we manually run `scripts/push-latest-tag.sh` to build and push the image.
+then we manually run `scripts/push-latest-tag.sh`, which uses `docker buildx
+build --provenance=mode=max --sbom=true --push` to publish version and `latest`
+tags in one command.
 
 Before triggering release/publish, run `just check` locally to match CI quality
 gates (Biome format/lint, UI tests/build, and Go format/test/vet).
