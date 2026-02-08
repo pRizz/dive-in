@@ -94,8 +94,22 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Set up Docker Scout CLI
+      - name: Docker Scout quickview (informational)
+        id: scout-quickview
+        continue-on-error: true
         uses: docker/scout-action@v1
+        with:
+          command: quickview
+          image: ${{ steps.image-refs.outputs.image }}
+          summary: true
+          write-comment: false
+
+      - name: Install Docker Scout CLI
+        run: |
+          set -euo pipefail
+          mkdir -p "${HOME}/.docker"
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh
+          docker scout version
 
       - name: Evaluate Docker Scout policy (non-blocking)
         id: scout-policy
