@@ -34,7 +34,7 @@
 - `just vm-vet`
 - `just vm-test`
 
-## Suggested pre-commit flow
+## Pre-commit requirement
 
 1. Run `just check`.
 2. If formatting issues are reported, run `just fix`.

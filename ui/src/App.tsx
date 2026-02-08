@@ -13,6 +13,7 @@ import {
   Box,
   Button,
   CardContent,
+  Collapse,
   FormControl,
   FormControlLabel,
   FormLabel,
@@ -263,7 +264,7 @@ interface ImageListProps {
   openHistoryEntry: (id: string) => void;
   startAnalysis: (target: string, selectedSource: AnalysisSource, maybeImageId?: string) => void;
   onStartBulkAnalyze: (request: BulkAnalyzeRequest) => Promise<void>;
-  getImages: () => void;
+  getImages: () => Promise<void>;
 }
 
 function ImageList(props: ImageListProps) {
@@ -272,6 +273,7 @@ function ImageList(props: ImageListProps) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isSingleColumn, setSingleColumn] = useState(true);
   const [isBulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [isRefreshingList, setRefreshingList] = useState(false);
   const historyByImageRef = useMemo(() => {
     const map = new Map<string, HistoryMetadata>();
     props.historyEntries.forEach((entry) => {
@@ -337,6 +339,23 @@ function ImageList(props: ImageListProps) {
     void props.onStartBulkAnalyze(request);
   };
 
+  const handleRefreshList = useCallback(async () => {
+    if (props.isJobActive || isRefreshingList) {
+      return;
+    }
+    const startedAt = Date.now();
+    setRefreshingList(true);
+    try {
+      await props.getImages();
+    } finally {
+      const remaining = Math.max(0, 400 - (Date.now() - startedAt));
+      if (remaining > 0) {
+        await sleep(remaining);
+      }
+      setRefreshingList(false);
+    }
+  }, [isRefreshingList, props.getImages, props.isJobActive]);
+
   return (
     <>
       <Typography variant="h3" sx={{ mb: 2 }}>
@@ -376,8 +395,13 @@ function ImageList(props: ImageListProps) {
           <MenuItem value="asc">Ascending</MenuItem>
           <MenuItem value="desc">Descending</MenuItem>
         </TextField>
-        <Button variant="outlined" onClick={props.getImages} disabled={props.isJobActive}>
-          Refresh list
+        <Button
+          variant="outlined"
+          onClick={() => void handleRefreshList()}
+          disabled={props.isJobActive || isRefreshingList}
+          startIcon={isRefreshingList ? <CircularProgress size={16} color="inherit" /> : undefined}
+        >
+          {isRefreshingList ? 'Refreshing...' : 'Refresh list'}
         </Button>
         <FormControlLabel
           control={
@@ -470,6 +494,7 @@ export function App() {
   const [bulkCancelRequested, setBulkCancelRequested] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<BulkAnalyzeProgress | undefined>(undefined);
   const [bulkReport, setBulkReport] = useState<BulkAnalyzeReport | undefined>(undefined);
+  const [isBulkReportVisible, setBulkReportVisible] = useState(false);
   const listScrollYRef = useRef(0);
   const pendingDetailScrollTopRef = useRef(false);
   const bulkCancelRequestedRef = useRef(false);
@@ -852,6 +877,7 @@ export function App() {
       let cancelledRemainingCount = 0;
 
       setBulkReport(undefined);
+      setBulkReportVisible(false);
       setBulkProgress(undefined);
       setBulkCancelRequested(false);
       bulkCancelRequestedRef.current = false;
@@ -872,6 +898,7 @@ export function App() {
           succeeded,
           failed: failures,
         });
+        setBulkReportVisible(true);
         return;
       }
 
@@ -947,6 +974,7 @@ export function App() {
           succeeded,
           failed: failures,
         });
+        setBulkReportVisible(true);
       }
     },
     [ddClient, fetchHistory, waitForJobTerminalStatus],
@@ -1023,6 +1051,7 @@ export function App() {
     setBulkCancelRequested(false);
     setBulkProgress(undefined);
     setBulkReport(undefined);
+    setBulkReportVisible(false);
     setBulkRunning(false);
   }, [source]);
 
@@ -1336,42 +1365,44 @@ export function App() {
             />
             <Box role="tabpanel" hidden={activeTab !== 'analysis'} sx={{ mt: 3 }}>
               {source === 'docker' && bulkProgress ? (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <Stack spacing={1}>
-                    <Typography variant="body2">
-                      Bulk analysis in progress: {bulkProgress.completed}/{bulkProgress.total}{' '}
-                      completed.
-                    </Typography>
-                    {bulkProgress.currentTarget ? (
-                      <Typography variant="body2" color="text.secondary">
-                        Current image: {bulkProgress.currentTarget}
-                      </Typography>
-                    ) : null}
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      justifyContent="space-between"
-                    >
-                      <Box sx={{ flex: 1 }}>
-                        {bulkProgress.total > 0 ? (
-                          <LinearProgress
-                            variant="determinate"
-                            value={(bulkProgress.completed / bulkProgress.total) * 100}
-                          />
-                        ) : (
-                          <LinearProgress />
-                        )}
+                <Alert
+                  severity="info"
+                  sx={{ mb: 2, '& .MuiAlert-message': { width: '100%', minWidth: 0 } }}
+                >
+                  <Stack spacing={1} sx={{ width: '100%' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, width: '100%' }}>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography variant="body2">
+                          Bulk analysis in progress: {bulkProgress.completed}/{bulkProgress.total}{' '}
+                          completed.
+                        </Typography>
+                        {bulkProgress.currentTarget ? (
+                          <Typography variant="body2" color="text.secondary">
+                            Current image: {bulkProgress.currentTarget}
+                          </Typography>
+                        ) : null}
                       </Box>
                       <Button
                         variant="outlined"
                         size="small"
                         disabled={bulkProgress.cancelRequested}
                         onClick={requestBulkCancel}
+                        sx={{ alignSelf: 'flex-start', ml: 'auto', mr: 1 }}
                       >
                         {bulkProgress.cancelRequested ? 'Stopping...' : 'Cancel bulk'}
                       </Button>
-                    </Stack>
+                    </Box>
+                    <Box sx={{ width: '100%', maxWidth: '100%', px: 1 }}>
+                      {bulkProgress.total > 0 ? (
+                        <LinearProgress
+                          variant="determinate"
+                          value={(bulkProgress.completed / bulkProgress.total) * 100}
+                          sx={{ width: '100%', my: 1 }}
+                        />
+                      ) : (
+                        <LinearProgress sx={{ width: '100%', my: 1 }} />
+                      )}
+                    </Box>
                     {bulkProgress.cancelRequested ? (
                       <Typography variant="body2" color="text.secondary">
                         Stopping after current image finishes.
@@ -1381,53 +1412,65 @@ export function App() {
                 </Alert>
               ) : null}
               {source === 'docker' && !analysis && !compareIds && bulkReport ? (
-                <Alert
-                  severity={
-                    bulkReport.failed.length > 0 || bulkReport.cancelled ? 'warning' : 'success'
-                  }
-                  action={
-                    <Button color="inherit" size="small" onClick={() => setBulkReport(undefined)}>
-                      Dismiss
-                    </Button>
-                  }
-                  sx={{ mb: 2 }}
+                <Collapse
+                  in={isBulkReportVisible}
+                  timeout={250}
+                  unmountOnExit
+                  onExited={() => setBulkReport(undefined)}
                 >
-                  <Stack spacing={0.75}>
-                    <Typography variant="body2">
-                      {bulkReport.cancelled
-                        ? `Bulk analysis cancelled for images newer than ${bulkReport.days} days.`
-                        : `Bulk analysis complete for images newer than ${bulkReport.days} days.`}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Force re-analyze: {bulkReport.forceReanalyze ? 'Yes' : 'No'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Visible: {bulkReport.visibleCount} | Eligible: {bulkReport.eligibleCount}
-                      {' | '}Skipped older: {bulkReport.skippedOlderCount}
-                      {' | '}Skipped unknown build time: {bulkReport.skippedUnknownCreatedAtCount}
-                      {' | '}Skipped already analyzed: {bulkReport.skippedAlreadyAnalyzedCount}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Succeeded: {bulkReport.succeeded.length} | Failed: {bulkReport.failed.length}
-                    </Typography>
-                    {bulkReport.cancelled ? (
-                      <Typography variant="body2" color="text.secondary">
-                        Remaining not run: {bulkReport.cancelledRemainingCount}
+                  <Alert
+                    severity={
+                      bulkReport.failed.length > 0 || bulkReport.cancelled ? 'warning' : 'success'
+                    }
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        onClick={() => setBulkReportVisible(false)}
+                        sx={{ mr: 2 }}
+                      >
+                        Dismiss
+                      </Button>
+                    }
+                    sx={{ mb: 2, alignItems: 'center', '& .MuiAlert-action': { alignItems: 'center' } }}
+                  >
+                    <Stack spacing={0.75}>
+                      <Typography variant="body2">
+                        {bulkReport.cancelled
+                          ? `Bulk analysis cancelled for images newer than ${bulkReport.days} days.`
+                          : `Bulk analysis complete for images newer than ${bulkReport.days} days.`}
                       </Typography>
-                    ) : null}
-                    {bulkReport.failed.length > 0 ? (
-                      <Box component="ul" sx={{ mt: 0, mb: 0, pl: 2.5 }}>
-                        {bulkReport.failed.map((failure) => (
-                          <li key={`${failure.image}-${failure.message}`}>
-                            <Typography variant="body2">
-                              {failure.image}: {failure.message}
-                            </Typography>
-                          </li>
-                        ))}
-                      </Box>
-                    ) : null}
-                  </Stack>
-                </Alert>
+                      <Typography variant="body2" color="text.secondary">
+                        Force re-analyze: {bulkReport.forceReanalyze ? 'Yes' : 'No'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Visible: {bulkReport.visibleCount} | Eligible: {bulkReport.eligibleCount}
+                        {' | '}Skipped older: {bulkReport.skippedOlderCount}
+                        {' | '}Skipped unknown build time: {bulkReport.skippedUnknownCreatedAtCount}
+                        {' | '}Skipped already analyzed: {bulkReport.skippedAlreadyAnalyzedCount}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Succeeded: {bulkReport.succeeded.length} | Failed: {bulkReport.failed.length}
+                      </Typography>
+                      {bulkReport.cancelled ? (
+                        <Typography variant="body2" color="text.secondary">
+                          Remaining not run: {bulkReport.cancelledRemainingCount}
+                        </Typography>
+                      ) : null}
+                      {bulkReport.failed.length > 0 ? (
+                        <Box component="ul" sx={{ mt: 0, mb: 0, pl: 2.5 }}>
+                          {bulkReport.failed.map((failure) => (
+                            <li key={`${failure.image}-${failure.message}`}>
+                              <Typography variant="body2">
+                                {failure.image}: {failure.message}
+                              </Typography>
+                            </li>
+                          ))}
+                        </Box>
+                      ) : null}
+                    </Stack>
+                  </Alert>
+                </Collapse>
               ) : null}
               {analysis ? (
                 <Stack spacing={2}>

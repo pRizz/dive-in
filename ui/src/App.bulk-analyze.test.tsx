@@ -141,6 +141,7 @@ describe('App bulk analyze flow', () => {
       root.unmount();
     });
     container.remove();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -305,6 +306,80 @@ describe('App bulk analyze flow', () => {
     expect(pageText()).toContain('skipped as older: 1');
     expect(pageText()).toContain('skipped (unknown build time): 1');
     expect(pageText()).toContain('skipped (already analyzed): 1');
+  });
+
+  it('shows refresh loading feedback and prevents rapid multi-clicks for at least 400ms', async () => {
+    const listImages = vi.fn(async () => [
+      {
+        RepoTags: ['repo/app:latest'],
+        Id: 'sha256:image-1',
+        RepoDigests: [],
+        Created: 1700000000,
+        Size: 1000,
+      },
+    ]);
+    const serviceGet = vi.fn(async (path: string) => {
+      if (path === '/checkdive') {
+        return {};
+      }
+      if (path === '/history') {
+        return [];
+      }
+      throw new Error(`Unhandled GET ${path}`);
+    });
+
+    createDockerDesktopClientMock.mockReturnValue({
+      docker: {
+        listImages,
+      },
+      extension: {
+        vm: {
+          service: {
+            get: serviceGet,
+            post: vi.fn(),
+            delete: vi.fn(),
+          },
+        },
+      },
+      host: {
+        openExternal: vi.fn(),
+      },
+    } as never);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    const refreshButton = await waitForButton('refresh list');
+    const initialCalls = listImages.mock.calls.length;
+
+    vi.useFakeTimers();
+
+    await clickButton(refreshButton);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(listImages.mock.calls.length).toBe(initialCalls + 1);
+    const refreshingButton = findButtons('refreshing...')[0] as HTMLButtonElement | undefined;
+    expect(refreshingButton).toBeDefined();
+    expect(refreshingButton?.disabled).toBe(true);
+
+    await clickButton(refreshingButton as HTMLButtonElement);
+    expect(listImages.mock.calls.length).toBe(initialCalls + 1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(399);
+      await Promise.resolve();
+    });
+    expect(findButtons('refreshing...').length).toBe(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+    });
+    const refreshButtonAfterDelay = findButtons('refresh list')[0] as HTMLButtonElement | undefined;
+    expect(refreshButtonAfterDelay).toBeDefined();
+    expect(refreshButtonAfterDelay?.disabled).toBe(false);
   });
 
   it('runs sequentially, continues after failures, and shows a final report while staying on list view', async () => {

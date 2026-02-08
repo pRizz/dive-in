@@ -37,7 +37,7 @@
 - Go vet: `just vm-vet`
 - Go tests: `just vm-test`
 
-## Pre-commit recommendation
+## Pre-commit requirement
 
 Run this before every commit:
 
