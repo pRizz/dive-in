@@ -29,6 +29,7 @@ import {
 } from '@mui/material';
 
 import Analysis from './analysis';
+import BulkAnalyzeDialog from './bulkanalyzedialog';
 import CompareView from './compare';
 import CIGateDialog from './cigatedialog';
 import ExportDialog from './exportdialog';
@@ -62,6 +63,10 @@ import {
   CompareSelectionState,
   CompareSide,
   JobStatus,
+  BulkAnalyzeRequest,
+  BulkAnalyzeProgress,
+  BulkAnalyzeReport,
+  BulkAnalyzeFailure,
 } from './models';
 
 interface DockerImage {
@@ -98,6 +103,12 @@ const formatElapsed = (elapsedSeconds?: number) => {
   return `${seconds}s`;
 };
 
+const sleep = async (ms: number) => {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+};
+
 const imageChipSx = {
   height: 'auto',
   '& .MuiChip-label': {
@@ -111,7 +122,8 @@ const imageChipSx = {
 interface ImageCardProps {
   image: Image;
   historyEntry?: HistoryMetadata;
-  isJobActive: boolean;
+  isSingleJobActive: boolean;
+  disableAnalyzeAction: boolean;
   jobTarget?: string;
   jobStatus?: JobStatus;
   jobMessage?: string;
@@ -185,7 +197,7 @@ function ImageCard(props: ImageCardProps) {
                 <Button
                   variant="contained"
                   color="primary"
-                  disabled={props.isJobActive}
+                  disabled={props.isSingleJobActive}
                   onClick={() => props.openHistoryEntry(props.historyEntry?.id ?? '')}
                   fullWidth
                 >
@@ -196,14 +208,14 @@ function ImageCard(props: ImageCardProps) {
                 <Button
                   variant={props.historyEntry ? 'outlined' : 'contained'}
                   color="primary"
-                  disabled={props.isJobActive}
+                  disabled={props.disableAnalyzeAction}
                   onClick={() => {
                     props.startAnalysis(props.image.name, 'docker', props.image.fullId);
                   }}
                   fullWidth
                 >
                   {props.historyEntry ? 'Re-analyze' : 'Analyze'}
-                  {props.isJobActive && props.jobTarget === props.image.name && (
+                  {props.isSingleJobActive && props.jobTarget === props.image.name && (
                     <CircularProgress
                       size={24}
                       sx={{
@@ -230,7 +242,7 @@ function ImageCard(props: ImageCardProps) {
                 {statusDisplay.detailMessage}
               </Typography>
             ) : null}
-            {props.isJobActive ? <LinearProgress sx={{ mt: 1 }} /> : null}
+            {props.isSingleJobActive ? <LinearProgress sx={{ mt: 1 }} /> : null}
           </CardContent>
         ) : null}
       </Card>
@@ -241,6 +253,8 @@ function ImageCard(props: ImageCardProps) {
 interface ImageListProps {
   images: Image[];
   historyEntries: HistoryMetadata[];
+  isSingleJobActive: boolean;
+  isBulkRunning: boolean;
   isJobActive: boolean;
   jobTarget?: string;
   jobStatus?: JobStatus;
@@ -248,6 +262,7 @@ interface ImageListProps {
   jobElapsedSeconds?: number;
   openHistoryEntry: (id: string) => void;
   startAnalysis: (target: string, selectedSource: AnalysisSource, maybeImageId?: string) => void;
+  onStartBulkAnalyze: (request: BulkAnalyzeRequest) => Promise<void>;
   getImages: () => void;
 }
 
@@ -256,6 +271,7 @@ function ImageList(props: ImageListProps) {
   const [sortBy, setSortBy] = useState<'name' | 'created' | 'size'>('created');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isSingleColumn, setSingleColumn] = useState(true);
+  const [isBulkDialogOpen, setBulkDialogOpen] = useState(false);
   const historyByImageRef = useMemo(() => {
     const map = new Map<string, HistoryMetadata>();
     props.historyEntries.forEach((entry) => {
@@ -275,6 +291,15 @@ function ImageList(props: ImageListProps) {
       }
     });
     return map;
+  }, [props.historyEntries]);
+  const analyzedImageIds = useMemo(() => {
+    const ids = new Set<string>();
+    props.historyEntries.forEach((entry) => {
+      if (entry.source === 'docker' && entry.imageId) {
+        ids.add(entry.imageId);
+      }
+    });
+    return ids;
   }, [props.historyEntries]);
   const filteredImages = useMemo(() => {
     const trimmed = filter.trim().toLowerCase();
@@ -306,6 +331,11 @@ function ImageList(props: ImageListProps) {
     });
     return copy;
   }, [filteredImages, sortBy, sortDirection]);
+
+  const handleStartBulkAnalyze = (request: BulkAnalyzeRequest) => {
+    setBulkDialogOpen(false);
+    void props.onStartBulkAnalyze(request);
+  };
 
   return (
     <>
@@ -359,7 +389,22 @@ function ImageList(props: ImageListProps) {
           }
           label="Single column"
         />
+        <Button
+          variant="outlined"
+          onClick={() => setBulkDialogOpen(true)}
+          disabled={props.isJobActive}
+        >
+          Bulk Analyze...
+        </Button>
       </Stack>
+      <BulkAnalyzeDialog
+        open={isBulkDialogOpen}
+        visibleImages={sortedImages}
+        analyzedImageIds={analyzedImageIds}
+        disabled={props.isJobActive}
+        onClose={() => setBulkDialogOpen(false)}
+        onConfirm={handleStartBulkAnalyze}
+      />
       {props.images.length === 0 ? (
         <Alert severity="info">
           No images found. Build or pull an image with Docker, then refresh the list.
@@ -378,7 +423,8 @@ function ImageList(props: ImageListProps) {
                   <ImageCard
                     image={image}
                     historyEntry={historyEntry}
-                    isJobActive={props.isJobActive}
+                    isSingleJobActive={props.isSingleJobActive}
+                    disableAnalyzeAction={props.isSingleJobActive || props.isBulkRunning}
                     jobTarget={props.jobTarget}
                     jobStatus={props.jobStatus}
                     jobMessage={props.jobMessage}
@@ -420,8 +466,13 @@ export function App() {
   );
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const [isCIGateDialogOpen, setCIGateDialogOpen] = useState(false);
+  const [isBulkRunning, setBulkRunning] = useState(false);
+  const [bulkCancelRequested, setBulkCancelRequested] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<BulkAnalyzeProgress | undefined>(undefined);
+  const [bulkReport, setBulkReport] = useState<BulkAnalyzeReport | undefined>(undefined);
   const listScrollYRef = useRef(0);
   const pendingDetailScrollTopRef = useRef(false);
+  const bulkCancelRequestedRef = useRef(false);
 
   const ddClient = useMemo(() => {
     try {
@@ -764,6 +815,143 @@ export function App() {
     [ddClient],
   );
 
+  const waitForJobTerminalStatus = useCallback(
+    async (currentJobId: string): Promise<AnalysisStatusResponse> => {
+      if (!ddClient?.extension?.vm?.service) {
+        throw new Error('Backend API is unavailable.');
+      }
+      while (true) {
+        const status = (await ddClient.extension.vm.service.get(
+          `/analysis/${currentJobId}/status`,
+        )) as AnalysisStatusResponse;
+        if (status.status !== 'queued' && status.status !== 'running') {
+          return status;
+        }
+        await sleep(1000);
+      }
+    },
+    [ddClient],
+  );
+
+  const requestBulkCancel = useCallback(() => {
+    if (!isBulkRunning || bulkCancelRequested) {
+      return;
+    }
+    bulkCancelRequestedRef.current = true;
+    setBulkCancelRequested(true);
+    setBulkProgress((prev) => (prev ? { ...prev, cancelRequested: true } : prev));
+  }, [bulkCancelRequested, isBulkRunning]);
+
+  const startBulkAnalyze = useCallback(
+    async (request: BulkAnalyzeRequest) => {
+      const startedAt = Date.now();
+      const failures: BulkAnalyzeFailure[] = [];
+      const succeeded: string[] = [];
+      const service = ddClient?.extension?.vm?.service;
+      let cancelled = false;
+      let cancelledRemainingCount = 0;
+
+      setBulkReport(undefined);
+      setBulkProgress(undefined);
+      setBulkCancelRequested(false);
+      bulkCancelRequestedRef.current = false;
+
+      if (!service) {
+        request.targets.forEach((target) => {
+          failures.push({
+            image: target.image,
+            message: 'Backend API is unavailable.',
+          });
+        });
+        setBulkReport({
+          ...request,
+          cancelled: false,
+          cancelledRemainingCount: 0,
+          startedAt,
+          completedAt: Date.now(),
+          succeeded,
+          failed: failures,
+        });
+        return;
+      }
+
+      setJobId(undefined);
+      setJobStatus(undefined);
+      setJobMessage(undefined);
+      setJobTarget(undefined);
+      setJobElapsedSeconds(undefined);
+      setBulkRunning(true);
+      setBulkProgress({
+        total: request.targets.length,
+        completed: 0,
+        startedAt,
+        cancelRequested: false,
+      });
+
+      try {
+        for (let index = 0; index < request.targets.length; index += 1) {
+          if (bulkCancelRequestedRef.current) {
+            cancelled = true;
+            cancelledRemainingCount = request.targets.length - index;
+            break;
+          }
+          const target = request.targets[index];
+          setBulkProgress({
+            total: request.targets.length,
+            completed: index,
+            currentTarget: target.image,
+            startedAt,
+            cancelRequested: bulkCancelRequestedRef.current,
+          });
+          try {
+            const payload: AnalyzeRequest = {
+              source: 'docker',
+              image: target.image,
+              imageId: target.imageId,
+            };
+            const data = (await service.post('/analyze', payload)) as AnalyzeResponse;
+            const terminalStatus = await waitForJobTerminalStatus(data.jobId);
+            if (terminalStatus.status === 'succeeded') {
+              succeeded.push(target.image);
+            } else {
+              failures.push({
+                image: target.image,
+                message: terminalStatus.message?.trim() || 'Analysis failed.',
+              });
+            }
+          } catch (error) {
+            failures.push({
+              image: target.image,
+              message: getErrorMessage(error),
+            });
+          }
+          setBulkProgress({
+            total: request.targets.length,
+            completed: index + 1,
+            startedAt,
+            cancelRequested: bulkCancelRequestedRef.current,
+          });
+        }
+        await fetchHistory();
+      } finally {
+        setBulkRunning(false);
+        setBulkCancelRequested(false);
+        bulkCancelRequestedRef.current = false;
+        setBulkProgress(undefined);
+        setBulkReport({
+          ...request,
+          cancelled,
+          cancelledRemainingCount,
+          startedAt,
+          completedAt: Date.now(),
+          succeeded,
+          failed: failures,
+        });
+      }
+    },
+    [ddClient, fetchHistory, waitForJobTerminalStatus],
+  );
+
   const ArchiveAnalyzer = () => {
     const archiveTarget = archivePath.trim();
     const archiveStatusDisplay =
@@ -826,6 +1014,17 @@ export function App() {
   useEffect(() => {
     bootstrapApp();
   }, [bootstrapApp]);
+
+  useEffect(() => {
+    if (source === 'docker') {
+      return;
+    }
+    bulkCancelRequestedRef.current = false;
+    setBulkCancelRequested(false);
+    setBulkProgress(undefined);
+    setBulkReport(undefined);
+    setBulkRunning(false);
+  }, [source]);
 
   useEffect(() => {
     if (!ddClient?.extension?.vm?.service || !jobId) {
@@ -928,7 +1127,8 @@ export function App() {
     pendingDetailScrollTopRef.current = false;
   }, [activeTab, analysis, compareIds]);
 
-  const isJobActive = jobStatus === 'queued' || jobStatus === 'running';
+  const isSingleJobActive = jobStatus === 'queued' || jobStatus === 'running';
+  const isJobActive = isSingleJobActive || isBulkRunning;
   const tabsEnabled = bootstrapPhase === 'ready' && !!ddClient && isDiveInstalled;
 
   const errorHint = (() => {
@@ -965,7 +1165,7 @@ export function App() {
       : undefined;
 
   const completedStatusDisplay =
-    jobStatus && jobTarget && !isJobActive
+    jobStatus && jobTarget && !isSingleJobActive
       ? formatJobStatusDisplay({
           jobStatus,
           jobMessage,
@@ -974,24 +1174,25 @@ export function App() {
         })
       : undefined;
 
-  const statusAlert = failedStatusDisplay ? (
-    <Alert
-      severity="error"
-      action={
-        <Button color="inherit" size="small" onClick={handleRetry}>
-          Retry
-        </Button>
-      }
-    >
-      <Stack spacing={0.5}>
-        <Typography variant="body2">{failedStatusDisplay.statusLine}</Typography>
-        {failedStatusDisplay.detailMessage ? (
-          <Typography variant="body2">{failedStatusDisplay.detailMessage}</Typography>
-        ) : null}
-        {errorHint ? <Typography variant="body2">{errorHint}</Typography> : null}
-      </Stack>
-    </Alert>
-  ) : null;
+  const statusAlert =
+    failedStatusDisplay && !isBulkRunning ? (
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={handleRetry}>
+            Retry
+          </Button>
+        }
+      >
+        <Stack spacing={0.5}>
+          <Typography variant="body2">{failedStatusDisplay.statusLine}</Typography>
+          {failedStatusDisplay.detailMessage ? (
+            <Typography variant="body2">{failedStatusDisplay.detailMessage}</Typography>
+          ) : null}
+          {errorHint ? <Typography variant="body2">{errorHint}</Typography> : null}
+        </Stack>
+      </Alert>
+    ) : null;
 
   return (
     <>
@@ -1134,6 +1335,100 @@ export function App() {
               onDownload={handleDownloadCIRules}
             />
             <Box role="tabpanel" hidden={activeTab !== 'analysis'} sx={{ mt: 3 }}>
+              {source === 'docker' && bulkProgress ? (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Stack spacing={1}>
+                    <Typography variant="body2">
+                      Bulk analysis in progress: {bulkProgress.completed}/{bulkProgress.total}{' '}
+                      completed.
+                    </Typography>
+                    {bulkProgress.currentTarget ? (
+                      <Typography variant="body2" color="text.secondary">
+                        Current image: {bulkProgress.currentTarget}
+                      </Typography>
+                    ) : null}
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      justifyContent="space-between"
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        {bulkProgress.total > 0 ? (
+                          <LinearProgress
+                            variant="determinate"
+                            value={(bulkProgress.completed / bulkProgress.total) * 100}
+                          />
+                        ) : (
+                          <LinearProgress />
+                        )}
+                      </Box>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        disabled={bulkProgress.cancelRequested}
+                        onClick={requestBulkCancel}
+                      >
+                        {bulkProgress.cancelRequested ? 'Stopping...' : 'Cancel bulk'}
+                      </Button>
+                    </Stack>
+                    {bulkProgress.cancelRequested ? (
+                      <Typography variant="body2" color="text.secondary">
+                        Stopping after current image finishes.
+                      </Typography>
+                    ) : null}
+                  </Stack>
+                </Alert>
+              ) : null}
+              {source === 'docker' && !analysis && !compareIds && bulkReport ? (
+                <Alert
+                  severity={
+                    bulkReport.failed.length > 0 || bulkReport.cancelled ? 'warning' : 'success'
+                  }
+                  action={
+                    <Button color="inherit" size="small" onClick={() => setBulkReport(undefined)}>
+                      Dismiss
+                    </Button>
+                  }
+                  sx={{ mb: 2 }}
+                >
+                  <Stack spacing={0.75}>
+                    <Typography variant="body2">
+                      {bulkReport.cancelled
+                        ? `Bulk analysis cancelled for images newer than ${bulkReport.days} days.`
+                        : `Bulk analysis complete for images newer than ${bulkReport.days} days.`}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Force re-analyze: {bulkReport.forceReanalyze ? 'Yes' : 'No'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Visible: {bulkReport.visibleCount} | Eligible: {bulkReport.eligibleCount}
+                      {' | '}Skipped older: {bulkReport.skippedOlderCount}
+                      {' | '}Skipped unknown build time: {bulkReport.skippedUnknownCreatedAtCount}
+                      {' | '}Skipped already analyzed: {bulkReport.skippedAlreadyAnalyzedCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Succeeded: {bulkReport.succeeded.length} | Failed: {bulkReport.failed.length}
+                    </Typography>
+                    {bulkReport.cancelled ? (
+                      <Typography variant="body2" color="text.secondary">
+                        Remaining not run: {bulkReport.cancelledRemainingCount}
+                      </Typography>
+                    ) : null}
+                    {bulkReport.failed.length > 0 ? (
+                      <Box component="ul" sx={{ mt: 0, mb: 0, pl: 2.5 }}>
+                        {bulkReport.failed.map((failure) => (
+                          <li key={`${failure.image}-${failure.message}`}>
+                            <Typography variant="body2">
+                              {failure.image}: {failure.message}
+                            </Typography>
+                          </li>
+                        ))}
+                      </Box>
+                    ) : null}
+                  </Stack>
+                </Alert>
+              ) : null}
               {analysis ? (
                 <Stack spacing={2}>
                   {completedStatusDisplay ? (
@@ -1178,6 +1473,8 @@ export function App() {
                     <ImageList
                       images={images}
                       historyEntries={historyEntries}
+                      isSingleJobActive={isSingleJobActive}
+                      isBulkRunning={isBulkRunning}
                       isJobActive={isJobActive}
                       jobTarget={jobTarget}
                       jobStatus={jobStatus}
@@ -1185,6 +1482,7 @@ export function App() {
                       jobElapsedSeconds={jobElapsedSeconds}
                       openHistoryEntry={openHistoryEntry}
                       startAnalysis={startAnalysis}
+                      onStartBulkAnalyze={startBulkAnalyze}
                       getImages={getImages}
                     />
                   ) : (

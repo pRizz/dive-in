@@ -100,6 +100,51 @@ export interface AnalyzeResponse {
   status: JobStatus;
 }
 
+export interface BulkAnalyzeTarget {
+  image: string;
+  imageId?: string;
+}
+
+export interface BulkAnalyzeRequest {
+  days: number;
+  forceReanalyze: boolean;
+  visibleCount: number;
+  eligibleCount: number;
+  skippedOlderCount: number;
+  skippedUnknownCreatedAtCount: number;
+  skippedAlreadyAnalyzedCount: number;
+  targets: BulkAnalyzeTarget[];
+}
+
+export interface BulkAnalyzeProgress {
+  total: number;
+  completed: number;
+  currentTarget?: string;
+  startedAt: number;
+  cancelRequested?: boolean;
+}
+
+export interface BulkAnalyzeFailure {
+  image: string;
+  message: string;
+}
+
+export interface BulkAnalyzeReport {
+  days: number;
+  forceReanalyze: boolean;
+  visibleCount: number;
+  eligibleCount: number;
+  skippedOlderCount: number;
+  skippedUnknownCreatedAtCount: number;
+  skippedAlreadyAnalyzedCount: number;
+  cancelled: boolean;
+  cancelledRemainingCount: number;
+  startedAt: number;
+  completedAt: number;
+  succeeded: string[];
+  failed: BulkAnalyzeFailure[];
+}
+
 export interface AnalysisStatusResponse {
   jobId: string;
   status: JobStatus;
