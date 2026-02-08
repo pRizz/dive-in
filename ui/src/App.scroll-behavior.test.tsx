@@ -47,6 +47,18 @@ function findButtons(container: HTMLElement, label: string) {
   );
 }
 
+function expectAnalysisMetricCopy(container: HTMLElement) {
+  const pageText = normalizeText(container);
+  expect(pageText).toContain('dive efficiency score');
+  expect(pageText).toContain('final image efficiency');
+  expect(pageText).toContain('efficient bytes');
+  expect(pageText).toContain('layers analyzed');
+  expect(pageText).toContain('efficient share');
+  expect(pageText).toContain('sum(min size per path) / sum(all observed sizes per path)');
+  expect(pageText).toContain('node_modules');
+  expect(pageText).toContain('final image efficiency is 1 - (wasted space / total size)');
+}
+
 async function waitFor(condition: () => boolean, timeoutMs = 3000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -183,6 +195,7 @@ describe('App scroll behavior for analysis details', () => {
     await waitFor(() => (container.textContent ?? '').includes('Back to images'));
     expect(scrollSpy).toHaveBeenCalledTimes(1);
     expect(scrollWhenDetailVisible).toEqual([true]);
+    expectAnalysisMetricCopy(container);
   });
 
   it('queues top scroll for compare and runs it after compare view is rendered', async () => {
@@ -334,5 +347,6 @@ describe('App scroll behavior for analysis details', () => {
     await waitFor(() => (container.textContent ?? '').includes('Back to images'));
     expect(scrollSpy).toHaveBeenCalledTimes(1);
     expect(scrollWhenDetailVisible).toEqual([true]);
+    expectAnalysisMetricCopy(container);
   });
 });

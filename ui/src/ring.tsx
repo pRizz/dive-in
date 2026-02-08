@@ -3,33 +3,42 @@ import CircularProgress, { CircularProgressProps } from '@mui/material/CircularP
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 
-export default function CircularProgressWithLabel(
-  props: CircularProgressProps & { value: number },
-) {
+interface CircularProgressWithLabelProps extends CircularProgressProps {
+  value: number;
+  labelInset?: number;
+}
+
+export default function CircularProgressWithLabel(props: CircularProgressWithLabelProps) {
+  const { value, labelInset = 0, size, ...progressProps } = props;
+  const resolvedSize = size ?? '4rem';
+
   return (
-    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-      <CircularProgress size="4rem" variant="determinate" {...props} />
+    <Box
+      sx={{
+        position: 'relative',
+        display: 'inline-flex',
+        width: resolvedSize,
+        height: resolvedSize,
+      }}
+    >
+      <CircularProgress size="100%" variant="determinate" value={value} {...progressProps} />
       <Box
         sx={{
-          top: 0,
-          left: 0,
-          bottom: 0,
-          right: 0,
           position: 'absolute',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          inset: labelInset,
+          display: 'grid',
+          placeItems: 'center',
         }}
       >
         <Typography
           component="div"
           color="text.secondary"
           sx={{
-            fontSize: '1.5rem',
+            fontSize: 'clamp(1.9rem, 2.6vw, 2.4rem)',
             lineHeight: 1,
             textAlign: 'center',
           }}
-        >{`${Math.round(props.value)}%`}</Typography>
+        >{`${Math.round(value)}%`}</Typography>
       </Box>
     </Box>
   );

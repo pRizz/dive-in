@@ -77,6 +77,21 @@ export function calculatePercent(part: number, total: number) {
   return part / total;
 }
 
+export function calculateFinalImageEfficiency(inefficientBytes: number, sizeBytes: number) {
+  if (!Number.isFinite(inefficientBytes) || !Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    return 1;
+  }
+
+  const score = 1 - inefficientBytes / sizeBytes;
+  if (score < 0) {
+    return 0;
+  }
+  if (score > 1) {
+    return 1;
+  }
+  return score;
+}
+
 export function extractId(id: string) {
   return id.replace('sha256:', '').substring(0, 12);
 }

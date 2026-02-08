@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   Alert,
   Box,
@@ -12,7 +13,13 @@ import {
   Typography,
 } from '@mui/material';
 import { AnalysisResult, DiveResponse, FileReference, NormalizedFileTree } from './models';
-import { calculatePercent, formatBytes, formatPercent, getErrorMessage } from './utils';
+import {
+  calculateFinalImageEfficiency,
+  calculatePercent,
+  formatBytes,
+  formatPercent,
+  getErrorMessage,
+} from './utils';
 import CircularProgressWithLabel from './ring';
 import ImageTable from './imagetable';
 import LayersTable from './layerstable';
@@ -34,6 +41,39 @@ function createEmptyFileTreeData(): NormalizedFileTree {
     aggregate: [],
     layers: [],
   };
+}
+
+const DIVE_EFFICIENCY_TOOLTIP =
+  "Dive's cross-layer score. It compares each path's smallest observed size against all observed bytes for that path across layers. Duplicate, overwritten, and removed paths lower the score.";
+const FINAL_IMAGE_EFFICIENCY_TOOLTIP =
+  'Final-image ratio derived from summary bytes only: 1 - (Wasted space / Total size). Higher means less of the final image is reported as wasted.';
+const WASTED_SPACE_TOOLTIP =
+  'Dive-reported inefficient bytes. This includes duplicate, overwritten, and removed file paths that consumed bytes across layers.';
+const EFFICIENCY_RING_SIZE = 'clamp(132px, 16vw, 196px)';
+
+function MetricLabelWithTooltip(props: { label: string; tooltip: string; fontSize?: number }) {
+  const labelFontSize = props.fontSize ?? 14;
+
+  return (
+    <Tooltip title={props.tooltip}>
+      <Box
+        component="span"
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.75,
+          cursor: 'help',
+          mb: 1,
+          color: 'text.secondary',
+        }}
+      >
+        <Typography component="span" sx={{ fontSize: labelFontSize }} color="inherit">
+          {props.label}
+        </Typography>
+        <InfoOutlinedIcon sx={{ fontSize: '0.95rem', color: 'text.disabled' }} />
+      </Box>
+    </Tooltip>
+  );
 }
 
 export default function Analysis(props: {
@@ -197,10 +237,17 @@ export default function Analysis(props: {
   };
   const isFileTreeEmpty = fileTreeData.aggregate.length === 0;
   const wastedPercent = calculatePercent(dive.image.inefficientBytes, dive.image.sizeBytes);
+  const efficientBytes = Math.max(dive.image.sizeBytes - dive.image.inefficientBytes, 0);
+  const efficientShare = calculatePercent(efficientBytes, dive.image.sizeBytes);
+  const layerCount = dive.layer.length;
+  const finalImageEfficiency = calculateFinalImageEfficiency(
+    dive.image.inefficientBytes,
+    dive.image.sizeBytes,
+  );
   return (
     <>
       <Stack direction="column" spacing={4} alignItems="baseline">
-        <Stack direction="row" spacing={2} flexWrap="wrap">
+        <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
           <Button sx={{ maxWidth: 180 }} variant="outlined" onClick={props.onExit}>
             Back to images
           </Button>
@@ -210,81 +257,134 @@ export default function Analysis(props: {
           <Button variant="outlined" onClick={props.onOpenCIGate} disabled={!props.historyId}>
             CI Gate
           </Button>
+          <Typography variant="h3">Analysis of {image.name}</Typography>
         </Stack>
-        <Typography variant="h3">Analyzing: {image.name}</Typography>
-        <Stack spacing={1}>
-          <Typography variant="body2" color="text.secondary">
-            Helpful links
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Dive docs:{' '}
-            <Link href="https://github.com/pRizz/dive" target="_blank" rel="noreferrer">
-              pRizz/dive
-            </Link>
-            <Typography
-              component="span"
-              aria-hidden="true"
-              sx={{ mx: 0.75, fontSize: '1rem', color: 'text.disabled' }}
-            >
-              ·
-            </Typography>
-            Layer changes docs:{' '}
-            <Link href="https://github.com/pRizz/dive#file-tree" target="_blank" rel="noreferrer">
-              pRizz/dive
-            </Link>
-            <Typography
-              component="span"
-              aria-hidden="true"
-              sx={{ mx: 0.75, fontSize: '1rem', color: 'text.disabled' }}
-            >
-              ·
-            </Typography>
-            <Link href="https://github.com/wagoodman/dive" target="_blank" rel="noreferrer">
-              wagoodman/dive
-            </Link>{' '}
-            (upstream)
-          </Typography>
-        </Stack>
-        <Stack direction="row" spacing={3} flexWrap="wrap" rowGap={3}>
+        <Stack
+          direction="row"
+          alignItems="stretch"
+          spacing={3}
+          flexWrap="wrap"
+          rowGap={3}
+          sx={{
+            width: '100%',
+            '& > *': {
+              flex: { xs: '1 1 100%', sm: '1 1 220px' },
+              minWidth: { xs: 0, sm: 220 },
+            },
+          }}
+        >
           <Card variant="outlined">
-            <CardContent>
-              <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
+            <CardContent
+              sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: 0.5,
+              }}
+            >
+              <Typography sx={{ fontSize: 15 }} color="text.secondary" gutterBottom>
                 Total Size
               </Typography>
-              <Typography variant="h2">{formatBytes(dive.image.sizeBytes)}</Typography>
+              <Typography
+                variant="h2"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '2.35rem', sm: '2.65rem' },
+                  lineHeight: 1.1,
+                }}
+              >
+                {formatBytes(dive.image.sizeBytes)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+                Efficient bytes: {formatBytes(efficientBytes)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+                Layers analyzed: {layerCount}
+              </Typography>
             </CardContent>
           </Card>
           <Card variant="outlined">
-            <CardContent>
-              <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
-                Wasted space
+            <CardContent
+              sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: 0.5,
+              }}
+            >
+              <MetricLabelWithTooltip
+                label="Wasted space"
+                tooltip={WASTED_SPACE_TOOLTIP}
+                fontSize={15}
+              />
+              <Typography
+                variant="h2"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '2.35rem', sm: '2.65rem' },
+                  lineHeight: 1.1,
+                }}
+              >
+                {formatBytes(dive.image.inefficientBytes)}
               </Typography>
-              <Typography variant="h2">{formatBytes(dive.image.inefficientBytes)}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
                 {formatPercent(wastedPercent)} of total image size
               </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+                Efficient share: {formatPercent(efficientShare)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.95rem' }}>
+                Estimated efficient bytes: {formatBytes(efficientBytes)}
+              </Typography>
             </CardContent>
           </Card>
           <Card variant="outlined">
             <CardContent>
-              <Tooltip title="Shows how much of the image size is used efficiently. Higher is better.">
-                <Typography
-                  sx={{ fontSize: 14, cursor: 'help' }}
-                  color="text.secondary"
-                  gutterBottom
-                >
-                  Efficiency Score
-                </Typography>
-              </Tooltip>
-              <CircularProgressWithLabel
-                value={dive.image.efficiencyScore * 100}
-              ></CircularProgressWithLabel>
+              <MetricLabelWithTooltip
+                label="Dive Efficiency Score"
+                tooltip={DIVE_EFFICIENCY_TOOLTIP}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5 }}>
+                <CircularProgressWithLabel
+                  value={dive.image.efficiencyScore * 100}
+                  size={EFFICIENCY_RING_SIZE}
+                  labelInset={13}
+                ></CircularProgressWithLabel>
+              </Box>
+            </CardContent>
+          </Card>
+          <Card variant="outlined">
+            <CardContent>
+              <MetricLabelWithTooltip
+                label="Final Image Efficiency"
+                tooltip={FINAL_IMAGE_EFFICIENCY_TOOLTIP}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5 }}>
+                <CircularProgressWithLabel
+                  value={finalImageEfficiency * 100}
+                  size={EFFICIENCY_RING_SIZE}
+                  labelInset={13}
+                ></CircularProgressWithLabel>
+              </Box>
             </CardContent>
           </Card>
         </Stack>
-        <Typography variant="body2" color="text.secondary">
-          Metrics are derived from Dive analysis results.
-        </Typography>
+        <Stack spacing={0.5}>
+          <Typography variant="body2" color="text.secondary">
+            Dive Efficiency Score measures cross-layer reuse and penalizes duplicated, overwritten,
+            or removed paths.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Formula concept: <code>sum(min size per path) / sum(all observed sizes per path)</code>{' '}
+            across layers. Large single-copy folders like <code>node_modules</code> can still
+            produce a high Dive score.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Final Image Efficiency is <code>1 - (Wasted space / Total size)</code>.
+          </Typography>
+        </Stack>
         <Stack spacing={2}>
           <Typography variant="h3">Layer file tree</Typography>
           {fileTreeWarning ? <Alert severity="warning">{fileTreeWarning}</Alert> : null}
@@ -388,6 +488,62 @@ export default function Analysis(props: {
             </Typography>
           </Stack>
           <LayersTable rows={dive.layer}></LayersTable>
+        </Stack>
+        <Stack spacing={1.25} sx={{ width: '100%' }}>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ fontSize: { xs: '1rem', sm: '1.08rem' }, fontWeight: 600 }}
+          >
+            Helpful links
+          </Typography>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ fontSize: { xs: '1rem', sm: '1.08rem' }, lineHeight: 1.65 }}
+          >
+            Dive docs:{' '}
+            <Link
+              href="https://github.com/pRizz/dive"
+              target="_blank"
+              rel="noreferrer"
+              sx={{ fontSize: 'inherit', fontWeight: 500 }}
+            >
+              pRizz/dive
+            </Link>
+            <Typography
+              component="span"
+              aria-hidden="true"
+              sx={{ mx: 0.9, fontSize: '1.1rem', color: 'text.disabled' }}
+            >
+              ·
+            </Typography>
+            Layer changes docs:{' '}
+            <Link
+              href="https://github.com/pRizz/dive#file-tree"
+              target="_blank"
+              rel="noreferrer"
+              sx={{ fontSize: 'inherit', fontWeight: 500 }}
+            >
+              pRizz/dive
+            </Link>
+            <Typography
+              component="span"
+              aria-hidden="true"
+              sx={{ mx: 0.9, fontSize: '1.1rem', color: 'text.disabled' }}
+            >
+              ·
+            </Typography>
+            <Link
+              href="https://github.com/wagoodman/dive"
+              target="_blank"
+              rel="noreferrer"
+              sx={{ fontSize: 'inherit', fontWeight: 500 }}
+            >
+              wagoodman/dive
+            </Link>{' '}
+            (upstream)
+          </Typography>
         </Stack>
       </Stack>
     </>
