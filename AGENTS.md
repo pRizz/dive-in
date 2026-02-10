@@ -57,6 +57,7 @@ Then re-run `just check`.
 
 - `just build-skills` generates repo-local Codex skills at `.codex/skills/deep-dive-*/SKILL.md`.
 - `just build`, `just check`, and `just dev` may update these generated files by design.
+- `.codex/skills/README.md` is generated/tracked and includes raw-link install guidance; commit it with skill updates.
 - If prompt data or skill-generation code changes, generated skill diffs are expected and must be committed.
 
 ## Git push default

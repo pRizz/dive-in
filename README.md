@@ -30,6 +30,7 @@ https://github.com/prakhar1989/dive-in
 
 Prompts and skills usage guide (including Codex import paths like `~/.agents/skills` and `.codex/skills`): `docs/prompts-and-skills.md`
 Repo-local generated Codex skills are written to `.codex/skills` via `just build-skills` (also run by `just build`, `just check`, and `just dev`).
+Direct raw-link install guidance and the generated skills index live at `.codex/skills/README.md`.
 
 ![List of images](screenshots/1.png)
 ![Analysis results](screenshots/2.png)

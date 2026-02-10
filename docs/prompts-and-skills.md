@@ -42,6 +42,8 @@ Deep Dive also generates repo-tracked Codex skills from prompt card JSON data:
 - Output path: `.codex/skills/deep-dive-*/SKILL.md`
 - Generate manually: `just build-skills`
 - Also generated automatically by: `just build`, `just check`, and `just dev`
+- Generated index + raw install links: `.codex/skills/README.md`
+- Each generated skill has a public raw URL suitable for install scripts
 
 When prompt data or skill generator logic changes, updates to generated `.codex/skills` files are expected and should be committed.
 
