@@ -13,6 +13,11 @@ export interface BadgeLink {
 
 export const README_BADGES: BadgeLink[] = [
   {
+    label: 'GitHub Stars',
+    imageUrl: 'https://img.shields.io/github/stars/pRizz/deep-dive',
+    href: 'https://github.com/pRizz/deep-dive',
+  },
+  {
     label: 'CI',
     imageUrl: 'https://github.com/pRizz/deep-dive/actions/workflows/ci.yml/badge.svg',
     href: 'https://github.com/pRizz/deep-dive/actions/workflows/ci.yml',
