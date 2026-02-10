@@ -1,0 +1,38 @@
+{
+  "id": "speed-up-deps",
+  "order": 6,
+  "title": "Speed Up Dependency Install Layers",
+  "teaser": "Make dependency steps deterministic and cache-friendly across local and CI builds.",
+  "category": "build-speed",
+  "tags": ["dependencies", "lockfiles", "deterministic builds"],
+  "useWhen": "Dependency install steps dominate build time or produce inconsistent results.",
+  "expectedImpact": "Faster and more predictable builds across environments.",
+  "prompt": {
+    "role": "You are an expert in Docker dependency-layer optimization for CI and local workflows.",
+    "objective": "Refactor dependency installation layers for speed, reproducibility, and cache reuse.",
+    "requiredInputs": [
+      "Current Dockerfile",
+      "Dependency manager and lockfile details",
+      "Current install commands",
+      "Whether private registries or auth are involved"
+    ],
+    "tasks": [
+      "Restructure Dockerfile to copy lockfiles before source code",
+      "Recommend dependency install flags for deterministic installs",
+      "Identify when cache mounts or package mirrors are useful",
+      "Separate dev and production dependencies if applicable"
+    ],
+    "constraints": [
+      "Do not weaken dependency integrity checks",
+      "Preserve current dependency versions unless explicitly requested",
+      "Keep secrets out of image layers",
+      "Call out compatibility caveats for package-manager-specific flags"
+    ],
+    "outputFormat": [
+      "Section: Current bottlenecks",
+      "Section: Updated Dockerfile dependency flow",
+      "Section: Suggested install command changes",
+      "Section: Performance validation steps"
+    ]
+  }
+}

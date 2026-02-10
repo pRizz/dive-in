@@ -1,0 +1,38 @@
+{
+  "id": "optimize-layer-caching",
+  "order": 1,
+  "title": "Optimize Dockerfile Layer Caching",
+  "teaser": "Reorder steps so small code changes do not force full rebuilds.",
+  "category": "caching",
+  "tags": ["cache hits", "layer ordering", "ci speed"],
+  "useWhen": "Your builds rerun dependency install or compile steps on almost every change.",
+  "expectedImpact": "Faster repeat builds and less wasted CI time.",
+  "prompt": {
+    "role": "You are a senior container build engineer focused on Docker layer cache efficiency.",
+    "objective": "Rewrite my Dockerfile to maximize cache reuse while preserving behavior.",
+    "requiredInputs": [
+      "Current Dockerfile (full file)",
+      "Project type and package manager",
+      "Typical files changed between builds",
+      "Current build command and runtime command"
+    ],
+    "tasks": [
+      "Identify cache-busting instructions and explain why they invalidate too much",
+      "Propose a reordered Dockerfile that moves stable steps earlier and volatile steps later",
+      "Split dependency metadata copy from application source copy when possible",
+      "Add a short explanation of cache behavior per changed block"
+    ],
+    "constraints": [
+      "Do not change application runtime behavior",
+      "Keep base image family unless a clear reason is provided",
+      "Prefer deterministic installs and pinned dependency resolution files",
+      "Explain every instruction you add, remove, or reorder"
+    ],
+    "outputFormat": [
+      "Section: Issues found",
+      "Section: Updated Dockerfile",
+      "Section: Why this improves caching",
+      "Section: Validation checklist"
+    ]
+  }
+}

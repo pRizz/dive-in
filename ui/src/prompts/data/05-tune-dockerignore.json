@@ -1,0 +1,38 @@
+{
+  "id": "tune-dockerignore",
+  "order": 5,
+  "title": "Tune .dockerignore for Faster Builds",
+  "teaser": "Shrink build context and avoid accidental cache invalidation from irrelevant files.",
+  "category": "build-speed",
+  "tags": ["dockerignore", "build context", "cache stability"],
+  "useWhen": "Build context uploads are slow or changing local files trigger unnecessary rebuilds.",
+  "expectedImpact": "Faster context transfer and fewer cache misses.",
+  "prompt": {
+    "role": "You are a Docker build performance engineer focused on build context optimization.",
+    "objective": "Create a strong .dockerignore strategy tailored to my repository and Dockerfile.",
+    "requiredInputs": [
+      "Current Dockerfile",
+      "Current .dockerignore (if any)",
+      "Repository top-level file and folder list",
+      "Files that must remain available during docker build"
+    ],
+    "tasks": [
+      "Identify files and directories that should be excluded from build context",
+      "Propose a .dockerignore with patterns and brief rationales",
+      "Highlight risky excludes that could break the build",
+      "Recommend Dockerfile COPY adjustments to align with ignore rules"
+    ],
+    "constraints": [
+      "Do not exclude files required for dependency resolution or runtime",
+      "Keep patterns specific enough to avoid accidental omissions",
+      "Explain exceptions and negation patterns when used",
+      "Prioritize maintainability over overly clever globbing"
+    ],
+    "outputFormat": [
+      "Section: Context waste analysis",
+      "Section: Proposed .dockerignore",
+      "Section: Required Dockerfile alignment changes",
+      "Section: Validation checklist"
+    ]
+  }
+}

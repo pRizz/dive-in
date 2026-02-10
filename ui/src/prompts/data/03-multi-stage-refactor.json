@@ -1,0 +1,38 @@
+{
+  "id": "multi-stage-refactor",
+  "order": 3,
+  "title": "Refactor into Multi-Stage Build",
+  "teaser": "Separate build and runtime responsibilities for cleaner, smaller images.",
+  "category": "size",
+  "tags": ["multi-stage", "runtime only", "clean outputs"],
+  "useWhen": "Your runtime image still includes compilers, package managers, or source files.",
+  "expectedImpact": "Smaller runtime images and reduced attack surface.",
+  "prompt": {
+    "role": "You are an expert in multi-stage Docker builds and reproducible delivery pipelines.",
+    "objective": "Convert my Dockerfile into an efficient multi-stage build with a minimal runtime stage.",
+    "requiredInputs": [
+      "Current Dockerfile (full file)",
+      "Build command and produced artifacts",
+      "Runtime entrypoint/command",
+      "Any files required at runtime (configs, assets, certs)"
+    ],
+    "tasks": [
+      "Design clear build and runtime stages with meaningful stage names",
+      "Copy only required artifacts into runtime stage",
+      "Ensure runtime stage excludes source code and build tooling unless needed",
+      "Document how each stage contributes to size and maintainability"
+    ],
+    "constraints": [
+      "Do not alter runtime command semantics",
+      "Keep artifact paths explicit and deterministic",
+      "Avoid introducing additional stages unless they provide real value",
+      "Preserve required environment variables and exposed ports"
+    ],
+    "outputFormat": [
+      "Section: Stage design summary",
+      "Section: Updated Dockerfile",
+      "Section: Artifact flow diagram (text)",
+      "Section: Validation checklist"
+    ]
+  }
+}

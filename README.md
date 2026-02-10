@@ -22,6 +22,7 @@ https://github.com/prakhar1989/dive-in
 ## Highlights
 
 - Analysis and History are split into dedicated tabs.
+- Prompts tab includes copy-ready AI Dockerfile optimization templates.
 - Image list includes filtering, sorting, refresh, and metadata chips.
 - History supports compare, export, and delete actions.
 - CI gate rules can be generated for `.dive-ci`.

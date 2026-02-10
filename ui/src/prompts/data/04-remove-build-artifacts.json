@@ -1,0 +1,38 @@
+{
+  "id": "remove-build-artifacts",
+  "order": 4,
+  "title": "Remove Build Artifacts and Temporary Files",
+  "teaser": "Eliminate caches, temporary files, and leftovers that inflate the final image.",
+  "category": "size",
+  "tags": ["cleanup", "temp files", "artifact hygiene"],
+  "useWhen": "Dive shows wasted bytes from files that are created and later removed or overwritten.",
+  "expectedImpact": "Less wasted space and cleaner layers.",
+  "prompt": {
+    "role": "You are a container image hygiene expert focused on removing layer waste.",
+    "objective": "Update my Dockerfile so temporary artifacts do not persist across layers.",
+    "requiredInputs": [
+      "Current Dockerfile (full file)",
+      "Largest wasted files or folders from analysis",
+      "Build tools and package manager in use",
+      "Any temporary directories currently used during build"
+    ],
+    "tasks": [
+      "Identify where temporary files, caches, or archives are left behind",
+      "Rewrite RUN steps to create and clean temporary data in the same layer",
+      "Minimize apt, npm, pip, or apk caches in final layers",
+      "Call out which wasted paths should disappear after the change"
+    ],
+    "constraints": [
+      "Do not remove files needed at runtime",
+      "Keep commands readable and maintainable",
+      "Prefer explicit cleanup over hidden side effects",
+      "Retain deterministic install behavior"
+    ],
+    "outputFormat": [
+      "Section: Waste sources identified",
+      "Section: Updated Dockerfile",
+      "Section: Expected layer cleanup impact",
+      "Section: Post-build verification commands"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "slim-base-image",
+  "order": 2,
+  "title": "Slim Down Base Image and Packages",
+  "teaser": "Reduce image size by selecting a tighter base and cleaner package strategy.",
+  "category": "size",
+  "tags": ["base image", "package cleanup", "footprint"],
+  "useWhen": "The final image is much larger than expected and includes tools not needed at runtime.",
+  "expectedImpact": "Smaller image downloads and faster container startup on cold nodes.",
+  "prompt": {
+    "role": "You are a pragmatic Docker optimization specialist focused on reducing image size safely.",
+    "objective": "Refactor my Dockerfile to reduce final image size without breaking runtime behavior.",
+    "requiredInputs": [
+      "Current Dockerfile (full file)",
+      "Runtime dependencies that must remain installed",
+      "Optional build-only dependencies",
+      "Current image size or target size goal"
+    ],
+    "tasks": [
+      "Review whether the base image is oversized for runtime needs",
+      "Propose a leaner base image option and explain tradeoffs",
+      "Remove unnecessary package install steps and package manager caches",
+      "Keep only runtime artifacts in the final stage"
+    ],
+    "constraints": [
+      "Preserve application behavior and required system libraries",
+      "Do not remove diagnostic tooling unless alternatives are provided",
+      "Avoid speculative changes that are not grounded in the provided Dockerfile",
+      "Call out risks for Alpine or musl adoption if relevant"
+    ],
+    "outputFormat": [
+      "Section: Current size risks",
+      "Section: Recommended Dockerfile changes",
+      "Section: Before and after size estimate",
+      "Section: Runtime verification steps"
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createDockerDesktopClient } from '@docker/extension-api-client/dist/index.js';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import {
   Typography,
   Card,
@@ -35,6 +36,7 @@ import CompareView from './compare';
 import CIGateDialog from './cigatedialog';
 import ExportDialog from './exportdialog';
 import HistoryList from './history';
+import PromptsTab from './prompts/prompts-tab';
 import {
   DOCKER_HUB_EXTENSION_URL,
   GITHUB_ISSUES_URL,
@@ -468,7 +470,7 @@ function ImageList(props: ImageListProps) {
 
 export function App() {
   const [analysis, setAnalysisResult] = useState<AnalysisResult | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<'analysis' | 'history'>('analysis');
+  const [activeTab, setActiveTab] = useState<'analysis' | 'history' | 'prompts'>('analysis');
   const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>('booting');
   const [images, setImages] = useState<Image[]>([]);
   const [isDiveInstalled, setDiveInstalled] = useState<boolean>(false);
@@ -1236,7 +1238,7 @@ export function App() {
         <Tabs
           value={activeTab}
           onChange={(_, value) => setActiveTab(value)}
-          aria-label="Analysis and history tabs"
+          aria-label="Analysis, history, and prompts tabs"
           sx={{
             '& .MuiTab-root': {
               fontSize: '2rem',
@@ -1247,6 +1249,13 @@ export function App() {
         >
           <Tab label="Analysis" value="analysis" disabled={!tabsEnabled} />
           <Tab label="History" value="history" disabled={!tabsEnabled} />
+          <Tab
+            label="Prompts"
+            value="prompts"
+            icon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+            iconPosition="start"
+            disabled={!tabsEnabled}
+          />
         </Tabs>
         <Typography variant="h1" sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto' }}>
           <Box
@@ -1553,6 +1562,9 @@ export function App() {
                 onCompare={openCompareView}
                 disabled={isJobActive}
               />
+            </Box>
+            <Box role="tabpanel" hidden={activeTab !== 'prompts'} sx={{ mt: 3 }}>
+              <PromptsTab />
             </Box>
           </Box>
         </Fade>

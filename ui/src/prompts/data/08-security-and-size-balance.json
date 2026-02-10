@@ -1,0 +1,38 @@
+{
+  "id": "security-and-size-balance",
+  "order": 8,
+  "title": "Minimize CVE Surface Without Breaking Runtime",
+  "teaser": "Balance security patching and package minimization while preserving app compatibility.",
+  "category": "security",
+  "tags": ["cve reduction", "patch strategy", "size tradeoffs"],
+  "useWhen": "Security scans report many vulnerabilities and you need a practical reduction strategy.",
+  "expectedImpact": "Fewer known vulnerabilities with controlled image size impact.",
+  "prompt": {
+    "role": "You are a container security and performance advisor balancing risk reduction and image size.",
+    "objective": "Refactor my Dockerfile to reduce CVE exposure while keeping runtime stable and lean.",
+    "requiredInputs": [
+      "Current Dockerfile",
+      "Recent vulnerability scan summary",
+      "Runtime dependency requirements",
+      "Any package pinning or compliance constraints"
+    ],
+    "tasks": [
+      "Identify high-value Dockerfile changes that reduce vulnerable package footprint",
+      "Recommend base image and package update strategy with minimal churn",
+      "Show where package removal is safe versus risky",
+      "Provide a staged rollout approach for validating security and runtime behavior"
+    ],
+    "constraints": [
+      "Do not recommend major version upgrades without noting compatibility risks",
+      "Preserve runtime-required system libraries",
+      "Prefer reproducible package versions and update cadence guidance",
+      "Separate quick wins from high-risk changes"
+    ],
+    "outputFormat": [
+      "Section: Priority security findings",
+      "Section: Dockerfile improvements",
+      "Section: Expected security and size impact",
+      "Section: Rollout and verification plan"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "harden-runtime-image",
+  "order": 7,
+  "title": "Harden Runtime Image (Least Privilege)",
+  "teaser": "Tighten runtime security while keeping behavior and operability intact.",
+  "category": "security",
+  "tags": ["non-root", "least privilege", "hardening"],
+  "useWhen": "You want stronger runtime defaults and reduced risk in production containers.",
+  "expectedImpact": "Lower attack surface and better baseline security posture.",
+  "prompt": {
+    "role": "You are a container security engineer who optimizes Dockerfiles for least privilege.",
+    "objective": "Improve Dockerfile runtime hardening without breaking the application.",
+    "requiredInputs": [
+      "Current Dockerfile",
+      "Required runtime user, ports, and writable paths",
+      "Any runtime capabilities or privileged operations needed",
+      "Current deployment platform constraints"
+    ],
+    "tasks": [
+      "Apply non-root user setup with explicit UID/GID where reasonable",
+      "Reduce installed packages to runtime essentials",
+      "Set secure file permissions for app files and entrypoints",
+      "Suggest additional runtime flags outside Dockerfile when relevant"
+    ],
+    "constraints": [
+      "Do not assume root-only runtime operations unless provided",
+      "Preserve health checks and startup behavior",
+      "Avoid introducing breaking permission changes",
+      "Explain each hardening tradeoff clearly"
+    ],
+    "outputFormat": [
+      "Section: Security gaps identified",
+      "Section: Hardened Dockerfile",
+      "Section: Operational tradeoffs",
+      "Section: Runtime validation checklist"
+    ]
+  }
+}
