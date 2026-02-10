@@ -1,6 +1,6 @@
 # Deep Dive
 
-[![GitHub Stars](https://img.shields.io/github/stars/pRizz/deep-dive?style=flat)](https://github.com/pRizz/deep-dive)
+[![GitHub Stars](https://img.shields.io/github/stars/pRizz/deep-dive)](https://github.com/pRizz/deep-dive)
 [![CI](https://github.com/pRizz/deep-dive/actions/workflows/ci.yml/badge.svg)](https://github.com/pRizz/deep-dive/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/pRizz/deep-dive?display_name=tag)](https://github.com/pRizz/deep-dive/releases)
 [![Docker Image](https://img.shields.io/docker/v/prizz/deep-dive?sort=semver&label=prizz%2Fdeep-dive)](https://hub.docker.com/r/prizz/deep-dive)
