@@ -103,6 +103,7 @@ describe('App prompts tab', () => {
         },
       },
       host: {
+        platform: 'darwin',
         openExternal: vi.fn(),
       },
     } as never);
@@ -139,5 +140,8 @@ describe('App prompts tab', () => {
     expect(tabPanels[0]?.hidden).toBe(true);
     expect(tabPanels[1]?.hidden).toBe(true);
     expect(normalizeText(container)).toContain('dockerfile ai prompts');
+    expect(normalizeText(container)).toContain(
+      'tip (docker desktop): use ⌘ command-click to open links in your browser.',
+    );
   });
 });

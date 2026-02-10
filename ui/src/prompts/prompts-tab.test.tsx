@@ -1,9 +1,24 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { GITHUB_ISSUES_URL } from '../constants';
 import { buildPromptText } from './build-prompt-text';
+import { buildSkillText } from './build-skill-text';
 import { promptCards } from './load-prompt-cards';
 import PromptsTab from './prompts-tab';
+
+const { createSkillBundleZipMock, downloadBlobFileMock } = vi.hoisted(() => ({
+  createSkillBundleZipMock: vi.fn(),
+  downloadBlobFileMock: vi.fn(),
+}));
+
+vi.mock('./export-skill-bundle', () => ({
+  createSkillBundleZip: createSkillBundleZipMock,
+}));
+
+vi.mock('./download-file', () => ({
+  downloadBlobFile: downloadBlobFileMock,
+}));
 
 function normalizeText(node: ParentNode) {
   return node.textContent?.replace(/\s+/g, ' ').trim().toLowerCase() ?? '';
@@ -60,6 +75,21 @@ describe('PromptsTab', () => {
       },
       configurable: true,
     });
+
+    createSkillBundleZipMock.mockReset();
+    createSkillBundleZipMock.mockResolvedValue({
+      blob: new Blob(['skills'], { type: 'application/zip' }),
+      filename: 'deep-dive-skills-both.zip',
+      manifest: {
+        generatedAt: '2026-02-10T00:00:00.000Z',
+        source: 'Deep Dive Prompts Tab',
+        selectedFormat: 'both',
+        totalSkills: promptCards.length,
+        skills: [],
+      },
+    });
+
+    downloadBlobFileMock.mockReset();
   });
 
   afterEach(async () => {
@@ -71,7 +101,7 @@ describe('PromptsTab', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders header and all prompt cards', async () => {
+  it('renders header, onboarding CTA, and all prompt cards', async () => {
     await act(async () => {
       root.render(<PromptsTab />);
     });
@@ -81,7 +111,47 @@ describe('PromptsTab', () => {
     promptCards.forEach((card) => {
       expect(pageText).toContain(card.title.toLowerCase());
     });
-    expect(findButtons(container, 'copy').length).toBe(promptCards.length);
+
+    expect(pageText).toContain('skills are reusable instruction playbooks');
+    const issuesLinks = Array.from(container.querySelectorAll('a[href]')).filter(
+      (link) => (link as HTMLAnchorElement).getAttribute('href') === GITHUB_ISSUES_URL,
+    );
+    expect(issuesLinks.length).toBeGreaterThan(0);
+    expect(findButtons(container, 'copy prompt').length).toBe(promptCards.length);
+    expect(findButtons(container, 'copy skill').length).toBe(promptCards.length);
+  });
+
+  it('shows macOS-specific Docker Desktop link tip', async () => {
+    await act(async () => {
+      root.render(<PromptsTab hostPlatform="darwin" />);
+    });
+
+    await waitFor(() => normalizeText(container).includes('⌘ command-click'));
+    expect(normalizeText(container)).toContain(
+      'tip (docker desktop): use ⌘ command-click to open links in your browser.',
+    );
+  });
+
+  it('shows windows/linux-specific Docker Desktop link tip', async () => {
+    await act(async () => {
+      root.render(<PromptsTab hostPlatform="win32" />);
+    });
+
+    await waitFor(() => normalizeText(container).includes('⌃ control-click'));
+    expect(normalizeText(container)).toContain(
+      'tip (docker desktop): use ⌃ control-click to open links in your browser.',
+    );
+  });
+
+  it('shows fallback Docker Desktop link tip when platform is unknown', async () => {
+    await act(async () => {
+      root.render(<PromptsTab hostPlatform={undefined} />);
+    });
+
+    await waitFor(() => normalizeText(container).includes('⌘/⌃ command/control-click'));
+    expect(normalizeText(container)).toContain(
+      'tip (docker desktop): use ⌘/⌃ command/control-click to open links in your browser.',
+    );
   });
 
   it('opens prompt details modal when a card is clicked', async () => {
@@ -106,14 +176,26 @@ describe('PromptsTab', () => {
       root.render(<PromptsTab />);
     });
 
-    const copyButton = await waitForButton(container, 'copy', 0);
-    await clickButton(copyButton);
+    const copyPromptButton = await waitForButton(container, 'copy prompt', 0);
+    await clickButton(copyPromptButton);
 
     await waitFor(() => writeTextMock.mock.calls.length > 0);
     expect(writeTextMock).toHaveBeenCalledWith(buildPromptText(promptCards[0]));
   });
 
-  it('copies prompt text from modal copy button', async () => {
+  it('copies codex skill text from card copy skill button', async () => {
+    await act(async () => {
+      root.render(<PromptsTab />);
+    });
+
+    const copySkillButton = await waitForButton(container, 'copy skill', 0);
+    await clickButton(copySkillButton);
+
+    await waitFor(() => writeTextMock.mock.calls.length > 0);
+    expect(writeTextMock).toHaveBeenCalledWith(buildSkillText(promptCards[0]).codexSkillMarkdown);
+  });
+
+  it('copies prompt text from modal copy prompt button', async () => {
     await act(async () => {
       root.render(<PromptsTab />);
     });
@@ -131,31 +213,48 @@ describe('PromptsTab', () => {
     expect(writeTextMock).toHaveBeenCalledWith(buildPromptText(firstCard));
   });
 
-  it('shows copied feedback then resets on card copy button', async () => {
+  it('opens export dialog and triggers bundle export', async () => {
+    await act(async () => {
+      root.render(<PromptsTab />);
+    });
+
+    const openExportDialogButton = await waitForButton(container, 'export all skills', 0);
+    await clickButton(openExportDialogButton);
+
+    await waitFor(() => normalizeText(document.body).includes('choose which skill formats'));
+    const exportSkillsButton = await waitForButton(document.body, 'export skills', 0);
+    await clickButton(exportSkillsButton);
+
+    await waitFor(() => createSkillBundleZipMock.mock.calls.length > 0);
+    expect(createSkillBundleZipMock).toHaveBeenCalledWith(promptCards, 'both');
+    expect(downloadBlobFileMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows copied prompt feedback then resets on card copy button', async () => {
     await act(async () => {
       root.render(<PromptsTab />);
     });
 
     vi.useFakeTimers();
 
-    const copyButton = await waitForButton(container, 'copy', 0);
+    const copyButton = await waitForButton(container, 'copy prompt', 0);
     await clickButton(copyButton);
 
     await act(async () => {
       await Promise.resolve();
     });
-    expect(findButtons(container, 'copied').length).toBeGreaterThanOrEqual(1);
+    expect(findButtons(container, 'copied prompt').length).toBeGreaterThanOrEqual(1);
 
     await act(async () => {
       vi.advanceTimersByTime(1799);
       await Promise.resolve();
     });
-    expect(findButtons(container, 'copied').length).toBeGreaterThanOrEqual(1);
+    expect(findButtons(container, 'copied prompt').length).toBeGreaterThanOrEqual(1);
 
     await act(async () => {
       vi.advanceTimersByTime(1);
       await Promise.resolve();
     });
-    expect(findButtons(container, 'copied').length).toBe(0);
+    expect(findButtons(container, 'copied prompt').length).toBe(0);
   });
 });

@@ -1564,7 +1564,7 @@ export function App() {
               />
             </Box>
             <Box role="tabpanel" hidden={activeTab !== 'prompts'} sx={{ mt: 3 }}>
-              <PromptsTab />
+              <PromptsTab hostPlatform={ddClient?.host?.platform} />
             </Box>
           </Box>
         </Fade>

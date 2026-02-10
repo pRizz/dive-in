@@ -8,15 +8,23 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Radio,
+  RadioGroup,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { buildPromptText } from './build-prompt-text';
+import { buildSkillText } from './build-skill-text';
 import { copyToClipboard } from './copy-to-clipboard';
-import { PromptCardCategory, PromptCardDefinition } from './types';
+import { PromptCardCategory, PromptCardDefinition, SkillFormat } from './types';
 
 const COPY_FEEDBACK_MS = 1800;
+
+type CopyAction = 'prompt' | 'skill';
 
 function categoryLabel(category: PromptCardCategory): string {
   if (category === 'build-speed') {
@@ -49,14 +57,25 @@ export default function PromptDetailDialog(props: {
 }) {
   const { open, card, onClose } = props;
   const [copyError, setCopyError] = useState<string | undefined>(undefined);
-  const [isCopied, setCopied] = useState(false);
+  const [copiedAction, setCopiedAction] = useState<CopyAction | undefined>(undefined);
+  const [selectedSkillFormat, setSelectedSkillFormat] = useState<SkillFormat>('codex');
   const resetCopyTimerRef = useRef<number | undefined>(undefined);
 
   const promptText = useMemo(() => (card ? buildPromptText(card) : ''), [card]);
+  const skillText = useMemo(() => (card ? buildSkillText(card) : undefined), [card]);
+  const selectedSkillText = useMemo(() => {
+    if (!skillText) {
+      return '';
+    }
+    return selectedSkillFormat === 'codex'
+      ? skillText.codexSkillMarkdown
+      : skillText.genericSkillMarkdown;
+  }, [selectedSkillFormat, skillText]);
 
   useEffect(() => {
     setCopyError(undefined);
-    setCopied(false);
+    setCopiedAction(undefined);
+    setSelectedSkillFormat('codex');
     if (resetCopyTimerRef.current !== undefined) {
       window.clearTimeout(resetCopyTimerRef.current);
       resetCopyTimerRef.current = undefined;
@@ -71,21 +90,38 @@ export default function PromptDetailDialog(props: {
     };
   }, []);
 
-  const handleCopy = async () => {
+  const markCopied = (copyAction: CopyAction) => {
+    setCopiedAction(copyAction);
+    if (resetCopyTimerRef.current !== undefined) {
+      window.clearTimeout(resetCopyTimerRef.current);
+    }
+    resetCopyTimerRef.current = window.setTimeout(() => {
+      setCopiedAction(undefined);
+      resetCopyTimerRef.current = undefined;
+    }, COPY_FEEDBACK_MS);
+  };
+
+  const handleCopyPrompt = async () => {
     if (!card) {
       return;
     }
     setCopyError(undefined);
     try {
       await copyToClipboard(promptText);
-      setCopied(true);
-      if (resetCopyTimerRef.current !== undefined) {
-        window.clearTimeout(resetCopyTimerRef.current);
-      }
-      resetCopyTimerRef.current = window.setTimeout(() => {
-        setCopied(false);
-        resetCopyTimerRef.current = undefined;
-      }, COPY_FEEDBACK_MS);
+      markCopied('prompt');
+    } catch (error) {
+      setCopyError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const handleCopySkill = async () => {
+    if (!card) {
+      return;
+    }
+    setCopyError(undefined);
+    try {
+      await copyToClipboard(selectedSkillText);
+      markCopied('skill');
     } catch (error) {
       setCopyError(error instanceof Error ? error.message : String(error));
     }
@@ -144,14 +180,43 @@ export default function PromptDetailDialog(props: {
                 },
               }}
             />
+            <FormControl>
+              <FormLabel id="skill-format-label">Skill format</FormLabel>
+              <RadioGroup
+                row
+                aria-labelledby="skill-format-label"
+                value={selectedSkillFormat}
+                onChange={(event) => setSelectedSkillFormat(event.target.value as SkillFormat)}
+              >
+                <FormControlLabel value="codex" control={<Radio />} label="Codex" />
+                <FormControlLabel value="generic" control={<Radio />} label="Generic" />
+              </RadioGroup>
+            </FormControl>
+            <TextField
+              label={`Copy-ready skill (${selectedSkillFormat === 'codex' ? 'Codex SKILL.md' : 'Generic markdown'})`}
+              value={selectedSkillText}
+              multiline
+              minRows={10}
+              fullWidth
+              InputProps={{
+                readOnly: true,
+                sx: {
+                  fontFamily: 'monospace',
+                  fontSize: '0.85rem',
+                },
+              }}
+            />
             {copyError ? <Alert severity="warning">{copyError}</Alert> : null}
           </Stack>
         ) : null}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-        <Button variant="contained" onClick={() => void handleCopy()} disabled={!card}>
-          {isCopied ? 'Copied' : 'Copy prompt'}
+        <Button variant="contained" onClick={() => void handleCopyPrompt()} disabled={!card}>
+          {copiedAction === 'prompt' ? 'Copied prompt' : 'Copy prompt'}
+        </Button>
+        <Button variant="outlined" onClick={() => void handleCopySkill()} disabled={!card}>
+          {copiedAction === 'skill' ? 'Copied skill' : 'Copy skill'}
         </Button>
       </DialogActions>
     </Dialog>

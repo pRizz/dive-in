@@ -1,5 +1,6 @@
 # Deep Dive
 
+[![GitHub Stars](https://img.shields.io/github/stars/pRizz/deep-dive?style=flat)](https://github.com/pRizz/deep-dive)
 [![CI](https://github.com/pRizz/deep-dive/actions/workflows/ci.yml/badge.svg)](https://github.com/pRizz/deep-dive/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/pRizz/deep-dive?display_name=tag)](https://github.com/pRizz/deep-dive/releases)
 [![Docker Image](https://img.shields.io/docker/v/prizz/deep-dive?sort=semver&label=prizz%2Fdeep-dive)](https://hub.docker.com/r/prizz/deep-dive)
@@ -22,10 +23,12 @@ https://github.com/prakhar1989/dive-in
 ## Highlights
 
 - Analysis and History are split into dedicated tabs.
-- Prompts tab includes copy-ready AI Dockerfile optimization templates.
+- Prompts tab includes copy-ready AI Dockerfile optimization templates and skill exports.
 - Image list includes filtering, sorting, refresh, and metadata chips.
 - History supports compare, export, and delete actions.
 - CI gate rules can be generated for `.dive-ci`.
+
+Prompts and skills usage guide: `docs/prompts-and-skills.md`
 
 ![List of images](screenshots/1.png)
 ![Analysis results](screenshots/2.png)
