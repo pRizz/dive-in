@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadPromptCardsFromModules } from './load-prompt-cards';
+import { loadPromptCardsFromEntries, loadPromptCardsFromModules } from './prompt-card-validation';
 
 function createPromptCard(overrides?: Partial<Record<string, unknown>>) {
   return {
@@ -68,5 +68,24 @@ describe('loadPromptCardsFromModules', () => {
         },
       }),
     ).toThrowError(/Duplicate prompt id "duplicate-id"/);
+  });
+
+  it('loads valid prompt cards from direct entries for script usage', () => {
+    const cards = loadPromptCardsFromEntries([
+      {
+        sourcePath: 'ui/src/prompts/data/one.json',
+        rawValue: createPromptCard({ id: 'first', order: 2, title: 'Beta' }),
+      },
+      {
+        sourcePath: 'ui/src/prompts/data/two.json',
+        rawValue: createPromptCard({ id: 'second', order: 2, title: 'Alpha' }),
+      },
+      {
+        sourcePath: 'ui/src/prompts/data/three.json',
+        rawValue: createPromptCard({ id: 'third', order: 1, title: 'Gamma' }),
+      },
+    ]);
+
+    expect(cards.map((card) => card.id)).toEqual(['third', 'second', 'first']);
   });
 });

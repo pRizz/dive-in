@@ -41,6 +41,12 @@
 3. Re-run `just check`.
 4. Commit only when the checks pass.
 
+## Generated skills
+
+- `just build-skills` generates repo-local Codex skills under `.codex/skills/deep-dive-*/SKILL.md`.
+- `just build`, `just check`, and `just dev` can update generated skill files as part of normal workflow.
+- When prompt data or skill-generation logic changes, generated skill file diffs are expected and should be committed.
+
 ## Git push default
 
 - When asked to push and no branch is specified, push to `main`.

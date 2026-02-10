@@ -29,6 +29,7 @@ https://github.com/prakhar1989/dive-in
 - CI gate rules can be generated for `.dive-ci`.
 
 Prompts and skills usage guide (including Codex import paths like `~/.agents/skills` and `.codex/skills`): `docs/prompts-and-skills.md`
+Repo-local generated Codex skills are written to `.codex/skills` via `just build-skills` (also run by `just build`, `just check`, and `just dev`).
 
 ![List of images](screenshots/1.png)
 ![Analysis results](screenshots/2.png)

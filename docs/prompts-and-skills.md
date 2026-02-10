@@ -35,6 +35,16 @@ The bundle also includes:
 - `deep-dive-skills/README.md`
 - `deep-dive-skills/manifest.json`
 
+## Repo-Local Generated Codex Skills
+
+Deep Dive also generates repo-tracked Codex skills from prompt card JSON data:
+
+- Output path: `.codex/skills/deep-dive-*/SKILL.md`
+- Generate manually: `just build-skills`
+- Also generated automatically by: `just build`, `just check`, and `just dev`
+
+When prompt data or skill generator logic changes, updates to generated `.codex/skills` files are expected and should be committed.
+
 ### After download
 
 #### Import into Codex

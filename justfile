@@ -5,16 +5,19 @@ tag := "dev"
 install:
   bun install --frozen-lockfile
 
-build: ui-build docker-build
+build: build-skills ui-build docker-build
 
 test: ui-test vm-test
 
-check: name-audit ui-format-check ui-lint ui-test ui-build vm-fmt-check vm-vet vm-test
+check: name-audit build ui-format-check ui-lint ui-test vm-fmt-check vm-vet vm-test
 
 fix: ui-format
 
 name-audit:
   bash scripts/check-project-name-references.sh
+
+build-skills:
+  bun scripts/build-skills.ts
 
 ui-dev:
   bun run --cwd ui dev
@@ -43,7 +46,7 @@ vm-vet:
 vm-fmt-check:
   cd vm && files="$(find . -name '*.go' -type f -exec gofmt -l {} +)" && test -z "$files" || (echo "Run 'gofmt -w' on the files listed below:" && echo "$files" && exit 1)
 
-docker-build:
+docker-build: build-skills
   docker build -t {{image}} .
 
 extension-validate:
@@ -56,10 +59,12 @@ update-extension:
   docker extension update {{extension_image}}:{{tag}} --force
 
 install-development-extension:
-  docker build -t {{image}} . ; docker extension install {{image}} --force
+  just docker-build
+  docker extension install {{image}} --force
 
 reinstall-development-extension:
-  docker build -t {{image}} . ; docker extension update {{image}} --force
+  just docker-build
+  docker extension update {{image}} --force
 
 reinstall-or-install-development-extension:
   just reinstall-development-extension || just install-development-extension
