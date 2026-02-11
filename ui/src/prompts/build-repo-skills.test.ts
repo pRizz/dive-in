@@ -99,6 +99,9 @@ describe('buildGeneratedRepoSkillsIndexReadmeFile', () => {
     expect(readmeFile.content).toContain('Generated file: run `just build-skills`');
     expect(readmeFile.content).toContain('One-command global install');
     expect(readmeFile.content).toContain(`curl -fsSL "${REPO_SKILLS_INSTALL_SCRIPT_URL}" | bash`);
+    expect(readmeFile.content).toContain('## Use in Codex');
+    expect(readmeFile.content).toContain('In Codex, type `/`.');
+    expect(readmeFile.content).toContain('`deep-dive-*` skill');
     expect(readmeFile.content).toContain(CODEX_SKILLS_OVERVIEW_URL);
     expect(readmeFile.content).toContain(CODEX_SKILLS_CREATE_URL);
     expect(readmeFile.content).toContain(CODEX_SKILLS_INSTALL_URL);

@@ -12,6 +12,11 @@ curl -fsSL "https://raw.githubusercontent.com/pRizz/deep-dive/main/.codex/skills
 bash /tmp/deep-dive-skills-install-all.sh
 ```
 
+## Use in Codex
+1. In Codex, type `/`.
+2. Select the relevant installed `deep-dive-*` skill from the picker.
+3. Submit your request.
+
 ## Official Codex Skills docs
 - Overview: `https://developers.openai.com/codex/skills`
 - Create a skill: `https://developers.openai.com/codex/skills#create-a-skill`

@@ -65,6 +65,12 @@ curl -fsSL "https://raw.githubusercontent.com/pRizz/deep-dive/main/.codex/skills
 - Override destination if needed: `DEEP_DIVE_SKILLS_INSTALL_ROOT=/custom/path ...`
 - The script is idempotent and prints per-skill status plus a final summary.
 
+#### Use in Codex
+
+1. In Codex, type `/`.
+2. Select the relevant installed `deep-dive-*` skill from the picker.
+3. Submit your request.
+
 ### After download
 
 #### Import into Codex

@@ -115,6 +115,9 @@ describe('PromptsTab', () => {
 
     expect(pageText).toContain('skills are reusable instruction playbooks');
     expect(pageText).toContain(INSTALL_ALL_SKILLS_COMMAND.toLowerCase());
+    expect(pageText).toContain(
+      'after install, in codex type /, select the appropriate deep-dive-* skill, then submit your request.',
+    );
     const issuesLinks = Array.from(container.querySelectorAll('a[href]')).filter(
       (link) => (link as HTMLAnchorElement).getAttribute('href') === GITHUB_ISSUES_URL,
     );

@@ -19,6 +19,7 @@ Quick Install: Codex Skills for Dockerfile Enhancements/Fixes (Global)
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/pRizz/deep-dive/main/.codex/skills/install-all.sh" | bash
 ```
+After install, in Codex type `/`, select the appropriate `deep-dive-*` skill from the picker, and submit your request.
 
 Built on top of the Dive CLI: [pRizz/dive](https://github.com/pRizz/dive), a fork of the excellent [wagoodman/dive](https://github.com/wagoodman/dive) CLI tool.
 

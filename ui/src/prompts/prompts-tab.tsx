@@ -198,6 +198,10 @@ export default function PromptsTab(props: PromptsTabProps) {
               ({linkOpenShortcutLabel} to open links).
             </Typography>
             <Typography variant="body2">Install all available Codex skills globally:</Typography>
+            <Typography variant="body2">
+              After install, in Codex type /, select the appropriate deep-dive-* skill, then submit
+              your request.
+            </Typography>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={1}
