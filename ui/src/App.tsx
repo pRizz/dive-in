@@ -1238,7 +1238,7 @@ export function App() {
         <Tabs
           value={activeTab}
           onChange={(_, value) => setActiveTab(value)}
-          aria-label="Analysis, history, and prompts tabs"
+          aria-label="Analysis, history, and prompts plus skills tabs"
           sx={{
             '& .MuiTab-root': {
               fontSize: '2rem',
@@ -1250,7 +1250,7 @@ export function App() {
           <Tab label="Analysis" value="analysis" disabled={!tabsEnabled} />
           <Tab label="History" value="history" disabled={!tabsEnabled} />
           <Tab
-            label="Prompts"
+            label="Prompts + Skills"
             value="prompts"
             icon={<AutoAwesomeOutlinedIcon fontSize="small" />}
             iconPosition="start"

@@ -1,6 +1,6 @@
 # Prompts and Skills Guide
 
-Deep Dive now provides two reusable instruction formats from the **Prompts** tab:
+Deep Dive now provides two reusable instruction formats from the **Prompts + Skills** tab:
 
 - **Prompt**: quick copy/paste text for one-time AI use.
 - **Skill**: reusable structured instructions for repeated workflows.
@@ -22,14 +22,14 @@ Deep Dive now provides two reusable instruction formats from the **Prompts** tab
 
 ## Single Skill Workflow
 
-1. Open **Prompts** tab.
+1. Open **Prompts + Skills** tab.
 2. Choose a card.
 3. Click **Copy skill** for default Codex format.
 4. Open **View details** to switch between Codex and Generic formats and copy the exact version you want.
 
 ## Batch Workflow (Export All)
 
-1. In **Prompts**, click **Export all skills**.
+1. In **Prompts + Skills**, click **Export all skills**.
 2. Select format: **Codex**, **Generic**, or **Both**.
 3. Download the zip bundle.
 4. Use files from:

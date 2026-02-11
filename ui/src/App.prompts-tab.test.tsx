@@ -114,7 +114,7 @@ describe('App prompts tab', () => {
 
     const analysisTab = await waitForButton(container, 'analysis');
     const historyTab = await waitForButton(container, 'history');
-    const promptsTab = await waitForButton(container, 'prompts');
+    const promptsTab = await waitForButton(container, 'prompts + skills');
 
     expect(analysisTab).toBeTruthy();
     expect(historyTab).toBeTruthy();
