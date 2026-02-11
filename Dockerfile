@@ -47,10 +47,10 @@ RUN apk add --no-cache ca-certificates curl tar \
 
 FROM alpine:3.23
 RUN apk add --no-cache ca-certificates su-exec \
-    && addgroup -S -g 10001 deepdive \
-    && adduser -S -D -u 10001 -G deepdive -h /home/deepdive deepdive \
-    && install -d -o deepdive -g deepdive -m 0755 /data/history /run/guest-services /home/deepdive
-ENV HOME=/home/deepdive
+    && addgroup -S -g 10001 deepdiver \
+    && adduser -S -D -u 10001 -G deepdiver -h /home/deepdiver deepdiver \
+    && install -d -o deepdiver -g deepdiver -m 0755 /data/history /run/guest-services /home/deepdiver
+ENV HOME=/home/deepdiver
 LABEL org.opencontainers.image.title="Deep Dive" \
     org.opencontainers.image.description="Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image." \
     org.opencontainers.image.vendor="Peter Ryszkiewicz" \

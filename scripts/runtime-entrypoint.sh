@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-APP_USER="deepdive"
+APP_USER="deepdiver"
 APP_UID="10001"
 APP_GID="10001"
 DOCKER_SOCKET="/var/run/docker.sock"
@@ -12,8 +12,8 @@ if [ "${1:-}" = "-socket" ] && [ -n "${2:-}" ]; then
 fi
 socket_dir="$(dirname "${socket_path}")"
 
-install -d -o "${APP_UID}" -g "${APP_GID}" -m 0755 /data/history "${socket_dir}" /home/deepdive
-export HOME="/home/deepdive"
+install -d -o "${APP_UID}" -g "${APP_GID}" -m 0755 /data/history "${socket_dir}" /home/deepdiver
+export HOME="/home/deepdiver"
 export USER="${APP_USER}"
 
 if [ -S "${DOCKER_SOCKET}" ]; then
