@@ -137,6 +137,9 @@ describe('PromptsTab', () => {
       'prompts & skills docs (⌘ command-click to open links).',
     );
     expect(normalizeText(container)).toContain(
+      'suggest a prompt in github issues (⌘ command-click to open links).',
+    );
+    expect(normalizeText(container)).toContain(
       'tip (docker desktop): use ⌘ command-click to open links in your browser.',
     );
   });
@@ -151,6 +154,9 @@ describe('PromptsTab', () => {
       'prompts & skills docs (⌃ control-click to open links).',
     );
     expect(normalizeText(container)).toContain(
+      'suggest a prompt in github issues (⌃ control-click to open links).',
+    );
+    expect(normalizeText(container)).toContain(
       'tip (docker desktop): use ⌃ control-click to open links in your browser.',
     );
   });
@@ -163,6 +169,9 @@ describe('PromptsTab', () => {
     await waitFor(() => normalizeText(container).includes('⌘/⌃ command/control-click'));
     expect(normalizeText(container)).toContain(
       'prompts & skills docs (⌘/⌃ command/control-click to open links).',
+    );
+    expect(normalizeText(container)).toContain(
+      'suggest a prompt in github issues (⌘/⌃ command/control-click to open links).',
     );
     expect(normalizeText(container)).toContain(
       'tip (docker desktop): use ⌘/⌃ command/control-click to open links in your browser.',

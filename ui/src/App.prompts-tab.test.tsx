@@ -144,6 +144,9 @@ describe('App prompts tab', () => {
       'prompts & skills docs (⌘ command-click to open links).',
     );
     expect(normalizeText(container)).toContain(
+      'suggest a prompt in github issues (⌘ command-click to open links).',
+    );
+    expect(normalizeText(container)).toContain(
       'tip (docker desktop): use ⌘ command-click to open links in your browser.',
     );
   });

@@ -247,8 +247,8 @@ export default function PromptsTab(props: PromptsTabProps) {
               Copy a prompt or open a card for full details. Have an idea?{' '}
               <Link href={GITHUB_ISSUES_URL} target="_blank" rel="noopener noreferrer">
                 Suggest a prompt in GitHub Issues
-              </Link>
-              .
+              </Link>{' '}
+              ({linkOpenShortcutLabel} to open links).
             </Typography>
           </Stack>
           <Button variant="outlined" onClick={() => setExportDialogOpen(true)}>
