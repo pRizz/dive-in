@@ -46,7 +46,7 @@ RUN apk add --no-cache ca-certificates curl tar \
     && install -m 0755 /tmp/dive /usr/local/bin/dive
 
 FROM alpine:3.23
-RUN apk add --no-cache ca-certificates su-exec \
+RUN apk add --no-cache ca-certificates-bundle su-exec \
     && addgroup -S -g 10001 deepdiver \
     && adduser -S -D -u 10001 -G deepdiver -h /home/deepdiver deepdiver \
     && install -d -o deepdiver -g deepdiver -m 0755 /data/history /run/guest-services /home/deepdiver
