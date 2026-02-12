@@ -1,1 +1,27 @@
-ui/node_modules
+# Keep Docker context limited to files referenced by Dockerfile COPY steps.
+# Start by ignoring everything, then allow only required files/directories.
+*
+
+# Build metadata and manifests copied directly from repository root.
+!.dockerignore
+!Dockerfile
+!package.json
+!bun.lock
+!docker-compose.yaml
+!metadata.json
+!docker.svg
+
+# Source trees needed for Go and UI build stages.
+!vm/
+!vm/**
+!ui/
+!ui/**
+
+# Runtime entrypoint script copied in final stage.
+!scripts/
+!scripts/runtime-entrypoint.sh
+
+# Re-exclude generated artifacts inside allowed trees.
+ui/node_modules/
+ui/dist/
+vm/bin/
