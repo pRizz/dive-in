@@ -21,7 +21,7 @@ import (
 	"deep-dive/ci"
 	"deep-dive/exports"
 	"deep-dive/history"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 )
 

@@ -4,7 +4,7 @@ import { computeFileTreeArtifacts } from './filetree-analysis';
 import { FileTreeWorkerRequest, FileTreeWorkerResponse } from './filetree-worker.types';
 import { getErrorMessage } from './utils';
 
-const workerScope = globalThis as DedicatedWorkerGlobalScope;
+const workerScope = globalThis as unknown as DedicatedWorkerGlobalScope;
 
 workerScope.onmessage = (event: MessageEvent<FileTreeWorkerRequest>) => {
   const request = event.data;

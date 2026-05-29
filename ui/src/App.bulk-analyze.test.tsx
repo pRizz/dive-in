@@ -8,13 +8,9 @@ const { createDockerDesktopClientMock } = vi.hoisted(() => ({
   createDockerDesktopClientMock: vi.fn(),
 }));
 
-vi.mock(
-  '@docker/extension-api-client/dist/index.js',
-  () => ({
-    createDockerDesktopClient: createDockerDesktopClientMock,
-  }),
-  { virtual: true },
-);
+vi.mock('@docker/extension-api-client/dist/index.js', () => ({
+  createDockerDesktopClient: createDockerDesktopClientMock,
+}));
 
 function createDeferred<T>() {
   let resolve: (value: T) => void = () => {};
@@ -560,7 +556,7 @@ describe('App bulk analyze flow', () => {
       throw new Error(`Unhandled GET ${path}`);
     });
 
-    const servicePost = vi.fn(async (path: string) => {
+    const servicePost = vi.fn(async (path: string, _payload?: unknown) => {
       if (path !== '/analyze') {
         throw new Error(`Unhandled POST ${path}`);
       }

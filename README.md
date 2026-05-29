@@ -7,6 +7,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/prizz/deep-dive)](https://hub.docker.com/r/prizz/deep-dive)
 [![Docker Image Size](https://img.shields.io/docker/image-size/prizz/deep-dive/latest)](https://hub.docker.com/r/prizz/deep-dive)
 [![License](https://img.shields.io/github/license/pRizz/deep-dive)](https://github.com/pRizz/deep-dive/blob/main/LICENSE)
+[![OpenLinks Site](https://openlinks.us/badges/openlinks.svg)](https://openlinks.us/)
 
 A Docker extension that helps you explore a docker image, layer contents, and discover ways to shrink the size of your Docker/OCI image.
 
@@ -62,7 +63,7 @@ Go through [the official docs](https://docs.docker.com/desktop/extensions-sdk/qu
 ### Prerequisites
 
 - **Docker Desktop 4.10.0+** (extensions must be enabled)
-- **Bun 1.3.8** (matches packageManager and engines)
+- **Bun 1.3.14** (matches packageManager and engines)
 - **Go 1.26+** (matches vm/go.mod)
 - **Note:** Dive CLI is bundled in the extension VM and not required locally
 

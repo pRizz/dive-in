@@ -7,13 +7,9 @@ const { createDockerDesktopClientMock } = vi.hoisted(() => ({
   createDockerDesktopClientMock: vi.fn(),
 }));
 
-vi.mock(
-  '@docker/extension-api-client/dist/index.js',
-  () => ({
-    createDockerDesktopClient: createDockerDesktopClientMock,
-  }),
-  { virtual: true },
-);
+vi.mock('@docker/extension-api-client/dist/index.js', () => ({
+  createDockerDesktopClient: createDockerDesktopClientMock,
+}));
 
 function normalizeText(node: Element) {
   return node.textContent?.replace(/\s+/g, ' ').trim().toLowerCase() ?? '';

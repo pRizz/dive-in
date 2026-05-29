@@ -2,7 +2,7 @@
 
 ## Local bootstrap
 
-1. Install Bun `1.3.8` and Go (version from `vm/go.mod`).
+1. Install Bun `1.3.14` and Go (version from `vm/go.mod`).
 2. Install project dependencies:
    ```bash
    just install
@@ -32,6 +32,7 @@
 - UI formatting check: `just ui-format-check`
 - UI lint: `just ui-lint`
 - UI tests: `just ui-test`
+- UI typecheck: `just ui-typecheck`
 - UI build: `just ui-build`
 - Go formatting check: `just vm-fmt-check`
 - Go vet: `just vm-vet`

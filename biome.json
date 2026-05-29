@@ -1,22 +1,20 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
   "files": {
-    "include": [
-      "src/**",
-      "vite.config.ts",
-      "vite-env.d.ts",
-      "../scripts/**/*.mjs",
-      "../scripts/**/*.cjs"
-    ],
-    "ignore": [
-      "node_modules/**",
-      "ui/node_modules/**",
-      "ui/dist/**"
+    "includes": [
+      "ui/src/**",
+      "ui/vite.config.ts",
+      "ui/vite-env.d.ts",
+      "scripts/**/*.mjs",
+      "scripts/**/*.cjs",
+      "!node_modules/**",
+      "!ui/node_modules/**",
+      "!ui/dist/**"
     ]
   },
   "formatter": {
@@ -25,8 +23,12 @@
     "indentWidth": 2,
     "lineWidth": 100
   },
-  "organizeImports": {
-    "enabled": false
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "off"
+      }
+    }
   },
   "javascript": {
     "formatter": {
@@ -48,16 +50,21 @@
       },
       "suspicious": {
         "noArrayIndexKey": "off",
-        "noExplicitAny": "off"
+        "noExplicitAny": "off",
+        "noTemplateCurlyInString": "off",
+        "noUselessEscapeInString": "off"
       },
       "complexity": {
         "noForEach": "off",
-        "noUselessEmptyExport": "off"
+        "noUselessEmptyExport": "off",
+        "noUselessFragments": "off"
       },
       "performance": {
         "noDelete": "off"
       },
       "correctness": {
+        "noUnusedFunctionParameters": "off",
+        "noUnusedImports": "off",
         "useExhaustiveDependencies": "off"
       }
     }

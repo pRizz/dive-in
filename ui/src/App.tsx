@@ -1058,7 +1058,8 @@ export function App() {
   }, [source]);
 
   useEffect(() => {
-    if (!ddClient?.extension?.vm?.service || !jobId) {
+    const service = ddClient?.extension?.vm?.service;
+    if (!service || !jobId) {
       return;
     }
     if (jobStatus !== 'queued' && jobStatus !== 'running') {
@@ -1069,9 +1070,7 @@ export function App() {
     const pollStatus = async () => {
       let status: AnalysisStatusResponse;
       try {
-        status = (await ddClient.extension.vm.service.get(
-          `/analysis/${jobId}/status`,
-        )) as AnalysisStatusResponse;
+        status = (await service.get(`/analysis/${jobId}/status`)) as AnalysisStatusResponse;
       } catch (error) {
         if (!isCancelled) {
           setJobStatus('failed');

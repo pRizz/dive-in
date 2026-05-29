@@ -2,7 +2,7 @@
 
 ## Setup
 
-- Install Bun `1.3.8`.
+- Install Bun `1.3.14`.
 - Install Go (see `vm/go.mod`).
 - Install dependencies:
   ```bash

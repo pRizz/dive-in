@@ -146,7 +146,11 @@ export async function createSkillBundleZip(
   });
 
   const bytes = await zip.generateAsync({ type: 'uint8array' });
-  const blob = new Blob([bytes], { type: 'application/zip' });
+  const buffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+  const blob = new Blob([buffer], { type: 'application/zip' });
 
   return {
     blob,

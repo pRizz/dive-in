@@ -41,18 +41,18 @@ jobs:
       scout_policy_exit_code: ${{ steps.scout-policy.outputs.exit_code }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -81,7 +81,7 @@ jobs:
 
       - name: Build and push
         id: build-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -107,8 +107,27 @@ jobs:
       - name: Install Docker Scout CLI
         run: |
           set -euo pipefail
-          mkdir -p "${HOME}/.docker"
-          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh
+          scout_version="1.21.0"
+          scout_asset="docker-scout_${scout_version}_linux_amd64.tar.gz"
+          scout_base_url="https://github.com/docker/scout-cli/releases/download/v${scout_version}"
+          scout_archive="${RUNNER_TEMP}/${scout_asset}"
+          scout_checksums="${RUNNER_TEMP}/docker-scout-checksums.txt"
+
+          curl -fsSL -o "${scout_archive}" "${scout_base_url}/${scout_asset}"
+          curl -fsSL -o "${scout_checksums}" "${scout_base_url}/docker-scout_${scout_version}_checksums.txt"
+
+          scout_checksum="$(
+            awk -v filename="${scout_asset}" '$2 == filename { print $1; exit }' "${scout_checksums}"
+          )"
+          if [[ -z "${scout_checksum}" ]]; then
+            echo "Unable to resolve checksum for ${scout_asset}."
+            exit 1
+          fi
+
+          printf '%s  %s\n' "${scout_checksum}" "${scout_archive}" | sha256sum -c -
+          tar -xzf "${scout_archive}" -C "${RUNNER_TEMP}" docker-scout
+          mkdir -p "${HOME}/.docker/cli-plugins"
+          install -m 0755 "${RUNNER_TEMP}/docker-scout" "${HOME}/.docker/cli-plugins/docker-scout"
           docker scout version
 
       - name: Evaluate Docker Scout policy (non-blocking)

@@ -1,4 +1,4 @@
-FROM golang:1.26.0-alpine3.23 AS builder
+FROM golang:1.26.3-alpine3.23 AS builder
 ENV CGO_ENABLED=0
 WORKDIR /backend
 COPY vm/go.* .
@@ -10,7 +10,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go build -trimpath -ldflags="-s -w" -o bin/service
 
-FROM --platform=$BUILDPLATFORM oven/bun:1.3.8-alpine AS client-builder
+FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS client-builder
 WORKDIR /workspace
 COPY package.json bun.lock ./
 COPY ui/package.json ui/package.json
@@ -19,13 +19,12 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 COPY ui ui
 RUN bun run --cwd ui build
 
-FROM alpine:3.23 AS dive-downloader
-# Always resolve the latest stable pRizz/dive release at build time so this
-# extension tracks our fork automatically, including future major versions.
-# A primary reason for maintaining the fork is to address Docker Scout
-# vulnerability warnings that come from stale upstream dive dependencies.
-# Fail fast if release metadata or download resolution breaks to avoid shipping
-# a stale or partially configured image.
+FROM alpine:3.23.4 AS dive-downloader
+ARG DIVE_VERSION=14.8
+ARG DIVE_TAG=v14.8
+# Pin the pRizz/dive release so extension builds are reproducible. Verify the
+# selected release artifact before installing it to avoid shipping a stale or
+# partially downloaded Dive binary.
 RUN apk add --no-cache ca-certificates curl tar \
     && ALPINE_ARCH="$(apk --print-arch)" \
     && echo "Detected Alpine arch: ${ALPINE_ARCH}" \
@@ -35,17 +34,20 @@ RUN apk add --no-cache ca-certificates curl tar \
       *) echo "Unsupported arch: ${ALPINE_ARCH}"; exit 1 ;; \
     esac \
     && echo "Using Dive arch: ${DIVE_ARCH}" \
-    && DIVE_RELEASE_JSON="$(curl -fsSL -H 'Accept: application/vnd.github+json' https://api.github.com/repos/pRizz/dive/releases/latest)" \
-    && DIVE_TAG="$(printf '%s\n' "${DIVE_RELEASE_JSON}" | awk -F'\"' '/\"tag_name\":/ { print $4; exit }')" \
-    && DIVE_TARBALL_URL="$(printf '%s\n' "${DIVE_RELEASE_JSON}" | awk -v arch="${DIVE_ARCH}" -F'\"' '/\"browser_download_url\":/ { if ($4 ~ ("_linux_" arch "\\.tar\\.gz$")) { print $4; exit } }')" \
-    && if [ -z "${DIVE_TAG}" ]; then echo "Failed to resolve pRizz/dive latest tag_name." >&2; exit 1; fi \
-    && if [ -z "${DIVE_TARBALL_URL}" ]; then echo "Failed to resolve pRizz/dive Linux tarball for arch ${DIVE_ARCH}." >&2; exit 1; fi \
-    && echo "Resolved pRizz/dive release: ${DIVE_TAG}" \
-    && echo "Resolved pRizz/dive asset: ${DIVE_TARBALL_URL}" \
-    && curl -fsSL "${DIVE_TARBALL_URL}" | tar -xz -C /tmp dive \
+    && DIVE_TARBALL="dive_${DIVE_VERSION}_linux_${DIVE_ARCH}.tar.gz" \
+    && DIVE_TARBALL_URL="https://github.com/pRizz/dive/releases/download/${DIVE_TAG}/${DIVE_TARBALL}" \
+    && DIVE_CHECKSUMS_URL="https://github.com/pRizz/dive/releases/download/${DIVE_TAG}/dive_${DIVE_VERSION}_checksums.txt" \
+    && echo "Using pRizz/dive release: ${DIVE_TAG}" \
+    && echo "Using pRizz/dive asset: ${DIVE_TARBALL_URL}" \
+    && curl -fsSL -o "/tmp/${DIVE_TARBALL}" "${DIVE_TARBALL_URL}" \
+    && curl -fsSL -o /tmp/dive-checksums.txt "${DIVE_CHECKSUMS_URL}" \
+    && DIVE_CHECKSUM="$(awk -v filename="${DIVE_TARBALL}" '$2 == filename { print $1; exit }' /tmp/dive-checksums.txt)" \
+    && if [ -z "${DIVE_CHECKSUM}" ]; then echo "Failed to resolve checksum for ${DIVE_TARBALL}." >&2; exit 1; fi \
+    && printf '%s  %s\n' "${DIVE_CHECKSUM}" "/tmp/${DIVE_TARBALL}" | sha256sum -c - \
+    && tar -xzf "/tmp/${DIVE_TARBALL}" -C /tmp dive \
     && install -m 0755 /tmp/dive /usr/local/bin/dive
 
-FROM alpine:3.23
+FROM alpine:3.23.4
 RUN apk add --no-cache ca-certificates-bundle su-exec \
     && addgroup -S -g 10001 deepdiver \
     && adduser -S -D -u 10001 -G deepdiver -h /home/deepdiver deepdiver \

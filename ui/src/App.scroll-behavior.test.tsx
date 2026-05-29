@@ -8,13 +8,9 @@ const { createDockerDesktopClientMock } = vi.hoisted(() => ({
   createDockerDesktopClientMock: vi.fn(),
 }));
 
-vi.mock(
-  '@docker/extension-api-client/dist/index.js',
-  () => ({
-    createDockerDesktopClient: createDockerDesktopClientMock,
-  }),
-  { virtual: true },
-);
+vi.mock('@docker/extension-api-client/dist/index.js', () => ({
+  createDockerDesktopClient: createDockerDesktopClientMock,
+}));
 
 const BASE_DIVE_RESPONSE: DiveResponse = {
   image: {

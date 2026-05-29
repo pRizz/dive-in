@@ -9,7 +9,7 @@ build: build-skills ui-build docker-build
 
 test: ui-test vm-test
 
-check: name-audit build ui-format-check ui-lint ui-test vm-fmt-check vm-vet vm-test
+check: name-audit build ui-format-check ui-lint ui-test ui-typecheck vm-fmt-check vm-vet vm-test
 
 fix: ui-format
 
@@ -27,6 +27,9 @@ ui-build:
 
 ui-test:
   bun run --cwd ui test:run
+
+ui-typecheck:
+  bun run --cwd ui typecheck
 
 ui-lint:
   bun run --cwd ui lint
