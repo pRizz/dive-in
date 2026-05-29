@@ -73,6 +73,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Enable Docker Desktop extensions
+        run: |
+          set -euo pipefail
+          mkdir -p "${HOME}/.docker/desktop"
+          cat > "${HOME}/.docker/desktop/settings-store.json" <<'JSON'
+          {
+            "extensionsEnabled": true
+          }
+          JSON
+          jq -e '.extensionsEnabled == true' "${HOME}/.docker/desktop/settings-store.json"
+
       - name: Start Docker Desktop
         uses: docker/desktop-action/start@v0.4.2
 
