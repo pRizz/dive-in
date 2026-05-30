@@ -37,6 +37,7 @@ import CIGateDialog from './cigatedialog';
 import ExportDialog from './exportdialog';
 import HistoryList from './history';
 import PromptsTab from './prompts/prompts-tab';
+import { BUILD_INFO } from './build-info';
 import {
   DOCKER_HUB_EXTENSION_URL,
   GITHUB_ISSUES_URL,
@@ -1592,6 +1593,31 @@ export function App() {
             wagoodman/dive
           </Link>{' '}
           (upstream).
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Version {BUILD_INFO.version}
+          {BUILD_INFO.maybeCommit ? (
+            <>
+              {' '}
+              <Typography component="span" aria-hidden="true" sx={{ color: 'text.disabled' }}>
+                ·
+              </Typography>{' '}
+              Commit{' '}
+              {BUILD_INFO.maybeCommit.maybeUrl ? (
+                <Link
+                  href={BUILD_INFO.maybeCommit.maybeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {BUILD_INFO.maybeCommit.shortValue}
+                </Link>
+              ) : (
+                <Typography component="span" color="text.primary">
+                  {BUILD_INFO.maybeCommit.shortValue}
+                </Typography>
+              )}
+            </>
+          ) : null}
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Made by{' '}

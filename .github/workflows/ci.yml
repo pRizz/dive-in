@@ -65,7 +65,12 @@ jobs:
         run: go vet ./...
 
       - name: Build extension image
-        run: docker build -t deep-dive:0.1.0-ci .
+        run: >
+          docker build
+          --build-arg APP_VERSION=0.1.0-ci
+          --build-arg GIT_COMMIT=${{ github.sha }}
+          -t deep-dive:0.1.0-ci
+          .
 
   validate-extension:
     runs-on: ubuntu-latest
@@ -101,7 +106,12 @@ jobs:
         run: docker extension validate ./metadata.json
 
       - name: Build extension image
-        run: docker build -t deep-dive:0.1.0-ci .
+        run: >
+          docker build
+          --build-arg APP_VERSION=0.1.0-ci
+          --build-arg GIT_COMMIT=${{ github.sha }}
+          -t deep-dive:0.1.0-ci
+          .
 
       - name: Validate extension image
         run: docker extension validate deep-dive:0.1.0-ci

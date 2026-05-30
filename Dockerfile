@@ -11,6 +11,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go build -trimpath -ldflags="-s -w" -o bin/service
 
 FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS client-builder
+ARG APP_VERSION=dev
+ARG GIT_COMMIT=
+ENV APP_VERSION="${APP_VERSION}" \
+    GIT_COMMIT="${GIT_COMMIT}"
 WORKDIR /workspace
 COPY package.json bun.lock ./
 COPY ui/package.json ui/package.json
@@ -48,6 +52,8 @@ RUN apk add --no-cache ca-certificates curl tar \
     && install -m 0755 /tmp/dive /usr/local/bin/dive
 
 FROM alpine:3.23.4
+ARG APP_VERSION=dev
+ARG GIT_COMMIT=
 RUN apk add --no-cache ca-certificates-bundle su-exec \
     && addgroup -S -g 10001 deepdiver \
     && adduser -S -D -u 10001 -G deepdiver -h /home/deepdiver deepdiver \
@@ -56,6 +62,8 @@ ENV HOME=/home/deepdiver
 LABEL org.opencontainers.image.title="Deep Dive" \
     org.opencontainers.image.description="Explore docker images, layer contents, and discover ways to shrink the size of your Docker/OCI image." \
     org.opencontainers.image.vendor="Peter Ryszkiewicz" \
+    org.opencontainers.image.version="${APP_VERSION}" \
+    org.opencontainers.image.revision="${GIT_COMMIT}" \
     com.docker.desktop.extension.api.version=">=0.4.2" \
     com.docker.extension.screenshots='[{"alt":"Main page", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/1.png?raw=true"}, {"alt":"Analysis results", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/2.png?raw=true"}, {"alt":"History", "url":"https://github.com/pRizz/deep-dive/blob/main/screenshots/3.png?raw=true"}]' \
     com.docker.extension.detailed-description="<h1>Deep Dive</h1><p><a href=\"https://github.com/pRizz/deep-dive\"><img src=\"https://img.shields.io/github/stars/pRizz/deep-dive\" alt=\"GitHub Stars\" /></a> <a href=\"https://github.com/pRizz/deep-dive/actions/workflows/ci.yml\"><img src=\"https://github.com/pRizz/deep-dive/actions/workflows/ci.yml/badge.svg\" alt=\"CI\" /></a> <a href=\"https://github.com/pRizz/deep-dive/releases\"><img src=\"https://img.shields.io/github/v/release/pRizz/deep-dive?display_name=tag\" alt=\"Release\" /></a> <a href=\"https://hub.docker.com/r/prizz/deep-dive\"><img src=\"https://img.shields.io/docker/v/prizz/deep-dive?sort=semver&label=prizz%2Fdeep-dive\" alt=\"Docker Image\" /></a> <a href=\"https://hub.docker.com/r/prizz/deep-dive\"><img src=\"https://img.shields.io/docker/pulls/prizz/deep-dive\" alt=\"Docker Pulls\" /></a> <a href=\"https://hub.docker.com/r/prizz/deep-dive\"><img src=\"https://img.shields.io/docker/image-size/prizz/deep-dive/latest\" alt=\"Docker Image Size\" /></a> <a href=\"https://github.com/pRizz/deep-dive/blob/main/LICENSE\"><img src=\"https://img.shields.io/github/license/pRizz/deep-dive\" alt=\"License\" /></a></p><p>A Docker extension that helps you explore a docker image, layer contents, and discover ways to shrink the size of your Docker/OCI image.</p><p>Built on top of the Dive CLI: <a href=\"https://github.com/pRizz/dive\">pRizz/dive</a>, a fork of the excellent <a href=\"https://github.com/wagoodman/dive\">wagoodman/dive</a> CLI tool.</p><p>Based on the original extension by Prakhar Srivastav: <a href=\"https://github.com/prakhar1989/dive-in\">https://github.com/prakhar1989/dive-in</a></p><p>Deep Dive is free and open source: <a href=\"https://github.com/pRizz/deep-dive\">https://github.com/pRizz/deep-dive</a></p><p>Docker Hub repository: <a href=\"https://hub.docker.com/r/prizz/deep-dive\">https://hub.docker.com/r/prizz/deep-dive</a></p><p>Install in your Docker Desktop or Docker Desktop CLI with</p><pre><code>docker extension install prizz/deep-dive</code></pre>" \

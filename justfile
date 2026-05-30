@@ -50,7 +50,10 @@ vm-fmt-check:
   cd vm && files="$(find . -name '*.go' -type f -exec gofmt -l {} +)" && test -z "$files" || (echo "Run 'gofmt -w' on the files listed below:" && echo "$files" && exit 1)
 
 docker-build: build-skills
-  docker build -t {{image}} .
+  docker build \
+    --build-arg APP_VERSION="{{tag}}" \
+    --build-arg GIT_COMMIT="$(git rev-parse HEAD)" \
+    -t {{image}} .
 
 extension-validate:
   docker extension validate .

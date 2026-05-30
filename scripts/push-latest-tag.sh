@@ -32,9 +32,12 @@ latest_image="prizz/deep-dive:latest"
 
 echo "Checking out ${latest_tag}..."
 git checkout "${latest_tag}"
+build_commit="$(git rev-parse HEAD)"
 
 echo "Building and pushing ${image} and ${latest_image} with attestations..."
 docker buildx build \
+  --build-arg "APP_VERSION=${latest_tag}" \
+  --build-arg "GIT_COMMIT=${build_commit}" \
   --provenance=mode=max \
   --sbom=true \
   --tag "${image}" \
